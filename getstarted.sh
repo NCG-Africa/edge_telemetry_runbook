@@ -210,12 +210,36 @@ fi
 # =============================================================================
 section "Step 1 — Updating System Packages"
 
+# RHEL without a subscription has zero enabled repos — nothing can be installed,
+# and every later step would fail with a wall of dnf errors. Stop here instead.
+if [ "$PKG_FAMILY" = rhel ] && [ "$($PKG_MGR repolist --enabled 2>/dev/null | grep -c .)" -le 1 ]; then
+  echo ""
+  warning "No enabled $PKG_MGR repositories — this host cannot install packages yet."
+  echo ""
+  echo "  If this is Red Hat Enterprise Linux, register it first:"
+  echo "    sudo subscription-manager register --username <rh-user>"
+  echo "    sudo subscription-manager attach --auto"
+  echo "  or with an activation key from your infrastructure team:"
+  echo "    sudo subscription-manager register --org <ORG_ID> --activationkey <KEY>"
+  echo ""
+  echo "  Then enable the base repos and re-run this script:"
+  echo "    sudo subscription-manager repos --enable rhel-9-for-x86_64-baseos-rpms \\"
+  echo "                                    --enable rhel-9-for-x86_64-appstream-rpms"
+  echo "    sudo dnf repolist"
+  echo ""
+  echo "  On a host that uses an internal mirror or Satellite instead, point"
+  echo "  /etc/yum.repos.d at it and re-run."
+  echo ""
+  error "Aborting — no package repositories available."
+fi
+
 info "Refreshing and upgrading packages ($PKG_MGR)..."
 pkg_refresh
+# A failed upgrade shouldn't abort the run — Docker may still install fine
 case "$PKG_FAMILY" in
-  debian) DEBIAN_FRONTEND=noninteractive apt-get upgrade -y ;;
-  rhel)   $PKG_MGR upgrade -y ;;
-  suse)   zypper --non-interactive update ;;
+  debian) DEBIAN_FRONTEND=noninteractive apt-get upgrade -y || warning "Upgrade reported errors — continuing." ;;
+  rhel)   $PKG_MGR upgrade -y || warning "Upgrade reported errors — continuing." ;;
+  suse)   zypper --non-interactive update || warning "Upgrade reported errors — continuing." ;;
 esac
 success "System packages updated"
 

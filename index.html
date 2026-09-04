@@ -53,7 +53,7 @@
       <h1 class="text-4xl font-bold text-green-500">EdgeTelemetry</h1>
       <p class="text-xl text-slate-300">Interactive Deployment Guide</p>
       <p class="text-sm text-slate-400 max-w-2xl mx-auto">
-        Deploy a production-ready telemetry system with Kafka, Redis caching, and web dashboard on Ubuntu 24.04 LTS.
+        Deploy a production-ready telemetry system with Kafka, Redis caching, and web dashboard on Linux — Ubuntu/Debian, RHEL/Rocky/Alma, or SLES/openSUSE.
       </p>
     </header>
 
@@ -110,7 +110,7 @@
       <div class="space-y-4">
         <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
           <span class="shrink-0">ℹ</span>
-          <p>This guide assumes you have a fresh Ubuntu 24.04 LTS server with sudo access and internet connectivity.</p>
+          <p>This guide assumes a fresh Linux server with sudo access and internet connectivity. Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, and SLES/openSUSE are supported — the setup script detects which and installs the right packages.</p>
         </div>
 
         <div class="space-y-3">
@@ -118,7 +118,7 @@
           <ul class="space-y-2 text-sm text-slate-400">
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
-              <span>Ubuntu 24.04 LTS server</span>
+              <span>Linux server: Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, or SLES/openSUSE</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
@@ -156,7 +156,7 @@
       <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
         <p class="font-semibold">Common Issues:</p>
         <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Check Ubuntu version: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">lsb_release -a</code></li>
+          <li>Check the distro: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">cat /etc/os-release</code> (or <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">bash getstarted.sh --detect-only</code> to see what the script detects)</li>
           <li>Verify ports: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo netstat -tulpn | grep -E '(8001|8002|8003|8080|6379)'</code></li>
         </ul>
       </div>
@@ -386,7 +386,7 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
           <ul class="space-y-2 text-sm text-slate-400">
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
-              <span>Validates OS (Ubuntu 24.04 LTS), RAM (4GB+), and swap (16GB recommended)</span>
+              <span>Detects the distro family (apt / dnf / zypper) and validates RAM (4GB+) and swap (16GB recommended)</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
@@ -399,6 +399,10 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
               <span>Validates port availability (80, 443, 8001-8003, 8080, 6379)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 shrink-0">✓</span>
+              <span>Opens the service ports on firewalld or ufw, whichever the host runs</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-green-500 shrink-0">✓</span>
@@ -564,7 +568,7 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
         <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">6</div>
         <div class="flex-1 min-w-0">
           <h2 class="text-base font-semibold text-slate-100">Transfer Files to Server</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Upload the deployment package to your Ubuntu server.</p>
+          <p class="text-sm text-slate-400 mt-0.5">Upload the deployment package to your server.</p>
         </div>
       </div>
 
@@ -631,7 +635,7 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
       <div class="space-y-4">
         <div class="flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
           <span class="shrink-0">⚠</span>
-          <p>Make sure your <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">.env</code> file is in the project root before deploying.</p>
+          <p>Before deploying, create the config from the template and paste in the values from Step 2:<br><code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">cp deployments/single-host/configs/single-host.env.example deployments/single-host/configs/single-host.env</code></p>
         </div>
 
         <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
@@ -657,7 +661,7 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
               Copy
             </button>
           </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make prod-up</code></pre>
+          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy</code></pre>
         </div>
 
         <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
@@ -678,7 +682,7 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
       <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
         <p class="font-semibold">Common Issues:</p>
         <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Docker not installed: Run <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo apt install docker.io docker-compose -y</code></li>
+          <li>Docker not installed: re-run <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo bash getstarted.sh</code> — it installs Docker CE for your distro</li>
           <li>Permission denied: Add user to docker group <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo usermod -aG docker $USER</code></li>
           <li>Port conflicts: Check if ports are already in use</li>
         </ul>
@@ -751,8 +755,8 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
       <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
         <p class="font-semibold">Troubleshooting:</p>
         <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Check logs: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make prod-logs</code></li>
-          <li>Restart services: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make prod-restart</code></li>
+          <li>Check logs: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make logs</code></li>
+          <li>Restart services: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make restart</code></li>
           <li>Check container status: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">docker ps</code></li>
         </ul>
       </div>
@@ -1036,7 +1040,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make prod-logs</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make logs</code></pre>
             </div>
 
             <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
@@ -1049,7 +1053,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make prod-down</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make down</code></pre>
             </div>
 
             <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
@@ -1062,7 +1066,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make prod-restart</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make restart</code></pre>
             </div>
           </div>
         </div>

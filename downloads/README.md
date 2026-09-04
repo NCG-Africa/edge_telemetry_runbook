@@ -10,7 +10,12 @@ This folder contains the EdgeTelemetry deployment package that users will downlo
    - This should contain all deployment files (Docker Compose, scripts, configs, etc.)
 
 2. **Update the deployment package**
-   - Simply replace the existing `EdgeTelemetryDeployment.zip` file
+   - Rebuild it from the deployment repo (tracked files only — never secrets or real .env):
+     ```bash
+     cd /path/to/EdgeTelemetryDeployment
+     git archive --format=zip --prefix=EdgeTelemetryDeployment/ \
+       -o /path/to/runbook/downloads/EdgeTelemetryDeployment.zip HEAD
+     ```
    - No code changes needed - the wizard automatically serves the latest file
 
 ## File Structure

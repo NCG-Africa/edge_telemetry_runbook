@@ -1,6 +1,6 @@
 # EdgeTelemetry Interactive Deployment Guide
 
-A single-file interactive HTML guide for deploying EdgeTelemetry on Ubuntu 24.04 LTS. Built with Material You Dark design system, progressive step unlocking, and GitHub integration.
+A single-file interactive HTML guide for deploying EdgeTelemetry on Linux (Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, SLES/openSUSE). Built with Material You Dark design system, progressive step unlocking, and GitHub integration.
 
 ## Features
 
@@ -59,7 +59,7 @@ The guide walks users through deploying:
 For issues with the deployment itself, refer to:
 - [EdgeTelemetry Deployment Repository](https://github.com/NCG-Africa/EdgeTelemetryDeployment)
 - Troubleshooting panels within the guide
-- Make commands: `make help`, `make health`, `make prod-logs`
+- Make commands: `make help`, `make health`, `make logs`
 
 ## License
 

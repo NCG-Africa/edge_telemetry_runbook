@@ -2,7 +2,7 @@
 # =============================================================================
 # EdgeTelemetry - Get Started Script
 # Validates mount points, installs all required software for deployment
-# Target OS: Ubuntu 24.04 LTS
+# Target OS: Debian/Ubuntu, RHEL/Rocky/Alma/CentOS/Fedora, or SLES/openSUSE
 # Usage:     sudo bash getstarted.sh
 # =============================================================================
 
@@ -29,7 +29,11 @@ section() {
   echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 }
 
-if [ "$EUID" -ne 0 ]; then
+# --detect-only prints what this host was detected as and exits (no root needed)
+DETECT_ONLY=false
+[ "${1:-}" = "--detect-only" ] && DETECT_ONLY=true
+
+if [ "$DETECT_ONLY" = false ] && [ "$EUID" -ne 0 ]; then
   error "Please run this script with sudo: sudo bash getstarted.sh"
 fi
 
@@ -40,16 +44,70 @@ INVOKING_USER=${SUDO_USER:-$USER}
 # =============================================================================
 section "Pre-flight Checks"
 
-if [ -f /etc/os-release ]; then
-  . /etc/os-release
-  if [[ "$ID" != "ubuntu" ]]; then
-    warning "Designed for Ubuntu — detected: $PRETTY_NAME. Proceeding anyway..."
-  else
-    success "OS: $PRETTY_NAME"
-  fi
+# OS_RELEASE is overridable so the detection matrix can be tested against fixtures
+OS_RELEASE="${OS_RELEASE:-/etc/os-release}"
+if [ -f "$OS_RELEASE" ]; then
+  . "$OS_RELEASE"
+  success "OS: $PRETTY_NAME"
 else
-  warning "Cannot detect OS. Proceeding anyway..."
+  error "Cannot detect OS ($OS_RELEASE missing)."
 fi
+
+# -----------------------------------------------------------------------------
+# Distro detection — family drives package manager, ID drives the Docker repo.
+# Covers Ubuntu/Debian/Mint, RHEL/Rocky/Alma/CentOS/Fedora/Amazon, SLES/openSUSE.
+# -----------------------------------------------------------------------------
+case " ${ID:-} ${ID_LIKE:-} " in
+  *" debian "*|*" ubuntu "*)          PKG_FAMILY=debian ;;
+  *" rhel "*|*" centos "*|*" fedora "*) PKG_FAMILY=rhel ;;
+  *" suse "*|*" sles "*|*" opensuse "*) PKG_FAMILY=suse ;;
+  *) error "Unsupported distro: ${PRETTY_NAME:-unknown}. Supported families: debian, rhel, suse." ;;
+esac
+
+case "$PKG_FAMILY" in
+  debian) PKG_MGR=apt-get ;;
+  rhel)   PKG_MGR=$(command -v dnf > /dev/null && echo dnf || echo yum) ;;
+  suse)   PKG_MGR=zypper ;;
+esac
+
+# Docker publishes repos per distro; map ours onto the closest one.
+# Empty = no upstream repo, fall back to the distro's own docker package.
+case "${ID:-}" in
+  ubuntu)              DOCKER_REPO_OS=ubuntu ;;
+  debian|raspbian)     DOCKER_REPO_OS=debian ;;
+  linuxmint|pop)       DOCKER_REPO_OS=ubuntu ;;
+  rhel)                DOCKER_REPO_OS=rhel ;;
+  centos|rocky|almalinux|ol) DOCKER_REPO_OS=centos ;;
+  fedora)              DOCKER_REPO_OS=fedora ;;
+  sles|opensuse-leap)  DOCKER_REPO_OS=sles ;;
+  *)                   DOCKER_REPO_OS="" ;;
+esac
+
+# Ubuntu derivatives report their own codename, which Docker's repo doesn't know
+DEB_CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
+
+success "Distro: ${ID:-unknown} (family: $PKG_FAMILY, package manager: $PKG_MGR)"
+
+if [ "$DETECT_ONLY" = true ]; then
+  echo "family=$PKG_FAMILY pkg=$PKG_MGR docker_repo=${DOCKER_REPO_OS:-none} codename=${DEB_CODENAME:-none}"
+  exit 0
+fi
+
+pkg_refresh() {
+  case "$PKG_FAMILY" in
+    debian) apt-get update -y ;;
+    rhel)   $PKG_MGR makecache -y ;;
+    suse)   zypper --non-interactive refresh ;;
+  esac
+}
+
+pkg_install() {
+  case "$PKG_FAMILY" in
+    debian) DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" ;;
+    rhel)   $PKG_MGR install -y "$@" ;;
+    suse)   zypper --non-interactive install "$@" ;;
+  esac
+}
 
 TOTAL_RAM=$(free -g | awk '/^Mem:/{print $2}')
 if [ "$TOTAL_RAM" -lt 4 ]; then
@@ -152,9 +210,13 @@ fi
 # =============================================================================
 section "Step 1 — Updating System Packages"
 
-info "Running apt-get update and upgrade..."
-apt-get update -y
-apt-get upgrade -y
+info "Refreshing and upgrading packages ($PKG_MGR)..."
+pkg_refresh
+case "$PKG_FAMILY" in
+  debian) DEBIAN_FRONTEND=noninteractive apt-get upgrade -y ;;
+  rhel)   $PKG_MGR upgrade -y ;;
+  suse)   zypper --non-interactive update ;;
+esac
 success "System packages updated"
 
 # =============================================================================
@@ -163,7 +225,11 @@ success "System packages updated"
 section "Step 2 — Installing Utilities"
 
 info "Installing make, unzip, curl, net-tools..."
-apt-get install -y make unzip curl net-tools ca-certificates gnupg lsb-release
+case "$PKG_FAMILY" in
+  debian) pkg_install make unzip curl net-tools ca-certificates gnupg lsb-release ;;
+  rhel)   pkg_install make unzip curl net-tools ca-certificates gnupg2 dnf-plugins-core ;;
+  suse)   pkg_install make unzip curl net-tools ca-certificates gpg2 ;;
+esac
 success "Utilities installed (make, unzip, curl, net-tools)"
 
 # =============================================================================
@@ -175,27 +241,71 @@ if command -v docker &> /dev/null; then
   warning "Docker already installed: $(docker --version)"
   info "Skipping Docker installation."
 else
-  info "Adding Docker GPG key..."
-  install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-    gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-  chmod a+r /etc/apt/keyrings/docker.gpg
+  DOCKER_PKGS="docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
 
-  info "Adding Docker apt repository..."
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-    https://download.docker.com/linux/ubuntu \
-    $(lsb_release -cs) stable" | \
-    tee /etc/apt/sources.list.d/docker.list > /dev/null
+  if [ -z "$DOCKER_REPO_OS" ]; then
+    # No upstream Docker repo for this distro (Amazon Linux, openSUSE Tumbleweed, ...)
+    warning "No Docker CE repo for '${ID:-unknown}' — using the distro's own docker package."
+    pkg_install docker || pkg_install docker.io
+  elif [ "$PKG_FAMILY" = debian ]; then
+    info "Adding Docker GPG key..."
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL "https://download.docker.com/linux/${DOCKER_REPO_OS}/gpg" | \
+      gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
 
-  info "Installing Docker Engine and Compose plugin..."
-  apt-get update -y
-  apt-get install -y docker-ce docker-ce-cli containerd.io \
-                     docker-buildx-plugin docker-compose-plugin
+    info "Adding Docker apt repository..."
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+      https://download.docker.com/linux/${DOCKER_REPO_OS} \
+      ${DEB_CODENAME} stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    info "Installing Docker Engine and Compose plugin..."
+    apt-get update -y
+    # shellcheck disable=SC2086
+    pkg_install $DOCKER_PKGS
+  elif [ "$PKG_FAMILY" = rhel ]; then
+    # RHEL ships podman-docker, which shadows the docker CLI — remove it first
+    $PKG_MGR remove -y podman-docker runc &> /dev/null || true
+
+    info "Adding Docker $PKG_MGR repository..."
+    if command -v dnf > /dev/null; then
+      dnf config-manager --add-repo "https://download.docker.com/linux/${DOCKER_REPO_OS}/docker-ce.repo"
+    else
+      yum-config-manager --add-repo "https://download.docker.com/linux/${DOCKER_REPO_OS}/docker-ce.repo"
+    fi
+
+    info "Installing Docker Engine and Compose plugin..."
+    # shellcheck disable=SC2086
+    pkg_install $DOCKER_PKGS
+  else
+    # SUSE: docker.com publishes an SLES repo; openSUSE uses the distro package
+    info "Adding Docker repository..."
+    zypper --non-interactive addrepo --gpgcheck-allow-unsigned \
+      "https://download.docker.com/linux/${DOCKER_REPO_OS}/docker-ce.repo" docker-ce &> /dev/null || \
+      warning "Docker repo add failed — falling back to distro packages."
+    zypper --non-interactive --gpg-auto-import-keys refresh
+    # shellcheck disable=SC2086
+    pkg_install $DOCKER_PKGS || pkg_install docker
+  fi
+
+  # Compose plugin is missing from some distro docker packages — install the binary
+  if ! docker compose version &> /dev/null; then
+    warning "Compose plugin not present — installing the standalone plugin binary..."
+    CLI_PLUGINS=/usr/local/lib/docker/cli-plugins
+    mkdir -p "$CLI_PLUGINS"
+    curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+      -o "$CLI_PLUGINS/docker-compose"
+    chmod +x "$CLI_PLUGINS/docker-compose"
+  fi
 
   success "Docker installed:         $(docker --version)"
   success "Docker Compose installed: $(docker compose version)"
 fi
+
+# Some distro packages ship no 'docker' group until the service first starts
+getent group docker > /dev/null || groupadd docker
 
 if id -nG "$INVOKING_USER" | grep -qw docker; then
   info "User '$INVOKING_USER' is already in the docker group."
@@ -209,6 +319,26 @@ systemctl enable docker
 systemctl start docker
 success "Docker service enabled and running"
 
+# Open the service ports on whichever firewall this distro runs
+# (firewalld on RHEL/SUSE, ufw on Ubuntu). 6379 stays closed — Redis is internal.
+SERVICE_PORTS="80 443 8001 8002 8003 8080"
+if systemctl is-active --quiet firewalld 2>/dev/null; then
+  info "firewalld is active — opening service ports..."
+  for P in $SERVICE_PORTS; do
+    firewall-cmd --permanent --add-port="${P}/tcp" > /dev/null
+  done
+  firewall-cmd --reload > /dev/null
+  success "Ports opened via firewalld: $SERVICE_PORTS"
+elif command -v ufw &> /dev/null && ufw status 2>/dev/null | grep -q "^Status: active"; then
+  info "ufw is active — opening service ports..."
+  for P in $SERVICE_PORTS; do
+    ufw allow "${P}/tcp" > /dev/null
+  done
+  success "Ports opened via ufw: $SERVICE_PORTS"
+else
+  info "No active host firewall detected — no ports opened."
+fi
+
 # =============================================================================
 # SECTION 6 — Install Nginx
 # =============================================================================
@@ -219,7 +349,7 @@ if command -v nginx &> /dev/null; then
   info "Skipping Nginx installation."
 else
   info "Installing Nginx..."
-  apt-get install -y nginx
+  pkg_install nginx
   success "Nginx installed: $(nginx -v 2>&1)"
 fi
 
@@ -357,19 +487,24 @@ if [ "$MOUNT_WARNINGS" = true ] || [ "$ALL_PORTS_CLEAR" = false ]; then
 fi
 
 echo -e "  ${CYAN}Next steps:${NC}"
-echo -e "    1.  From your local machine, copy the zip to the server:"
+echo -e "    1.  From your local machine, copy the project to the server:"
 echo -e "        ${BLUE}scp EdgeTelemetryDeployment.zip user@<server-ip>:/opt/edgetelemetry/${NC}"
-echo -e "    2.  Extract the project:"
+echo -e "    2.  Extract:"
 echo -e "        ${BLUE}cd /opt/edgetelemetry && unzip EdgeTelemetryDeployment.zip${NC}"
 echo -e "    3.  Enter the project directory:"
 echo -e "        ${BLUE}cd EdgeTelemetryDeployment${NC}"
-echo -e "    4.  Create the config file:"
-echo -e "        ${BLUE}cp configs/processor-config.env.example configs/processor-config.env${NC}"
-echo -e "    5.  Paste in values provided by your infrastructure team:"
-echo -e "        ${BLUE}nano configs/processor-config.env${NC}"
-echo -e "         → Set DATABASE_URL, EDGE_JWT_SECRET, and all other required values"
-echo -e "    6.  Deploy:"
-echo -e "        ${BLUE}make prod-deploy${NC}"
+echo -e ""
+echo -e "    Then pick one deployment:"
+echo -e ""
+echo -e "    ${GREEN}A. Single-host${NC} (everything on this server):"
+echo -e "        ${BLUE}cp deployments/single-host/configs/single-host.env.example deployments/single-host/configs/single-host.env${NC}"
+echo -e "        ${BLUE}nano deployments/single-host/configs/single-host.env${NC}  # set DATABASE_URL"
+echo -e "        ${BLUE}make deploy-single-host${NC}"
+echo -e ""
+echo -e "    ${GREEN}B. Segmented${NC} (DMZ + Bank split — run on each host separately):"
+echo -e "         See shared/README.md for the full mTLS + JWT key setup,"
+echo -e "         then run ${BLUE}make deploy-dmz${NC} on the DMZ host and"
+echo -e "         ${BLUE}make deploy-bank${NC} on the bank host."
 echo ""
 echo -e "  ${YELLOW}NOTE:${NC} If you were added to the docker group during this run, run:"
 echo -e "        ${BLUE}newgrp docker${NC}  (or log out and back in)"

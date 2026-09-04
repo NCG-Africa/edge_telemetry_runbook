@@ -59,7 +59,7 @@ The guide walks users through deploying:
 For issues with the deployment itself, refer to:
 - [EdgeTelemetry Deployment Repository](https://github.com/NCG-Africa/EdgeTelemetryDeployment)
 - Troubleshooting panels within the guide
-- Make commands: `make help`, `make health`, `make logs`
+- Make commands: `make help`, `make health`, `make status`, `make deploy-logs`
 
 ## License
 

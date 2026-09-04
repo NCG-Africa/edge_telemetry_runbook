@@ -755,8 +755,8 @@ EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
       <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
         <p class="font-semibold">Troubleshooting:</p>
         <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Check logs: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make logs</code></li>
-          <li>Restart services: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make restart</code></li>
+          <li>Check logs: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make deploy-logs</code></li>
+          <li>Restart services: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make deploy-restart</code></li>
           <li>Check container status: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">docker ps</code></li>
         </ul>
       </div>
@@ -1040,7 +1040,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make logs</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-logs</code></pre>
             </div>
 
             <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
@@ -1053,7 +1053,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make down</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-down</code></pre>
             </div>
 
             <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
@@ -1066,7 +1066,7 @@ sudo systemctl reload nginx</code></pre>
                   Copy
                 </button>
               </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make restart</code></pre>
+              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-restart</code></pre>
             </div>
           </div>
         </div>

@@ -28,1419 +28,795 @@
       }
     }
   </script>
+  <style type="text/tailwindcss">
+    @layer components {
+      .card { @apply rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-5 sm:p-8 transition-all duration-300 min-w-0; }
+      .ic { @apply bg-slate-900/50 px-1.5 py-0.5 rounded text-xs font-mono; overflow-wrap: anywhere; }
+      .note { @apply flex gap-3 p-4 rounded-xl border text-sm; }
+      .note-info { @apply note bg-blue-500/10 border-blue-500/20 text-blue-300; }
+      .note-warn { @apply note bg-amber-500/10 border-amber-500/20 text-amber-300; }
+      .note-ok { @apply note bg-green-500/10 border-green-500/20 text-green-300; }
+      .note-danger { @apply note bg-red-500/10 border-red-500/20 text-red-300; }
+      .lbl { @apply block text-xs font-semibold text-slate-400 uppercase tracking-widest; }
+      .field { @apply w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200; }
+      .hint { @apply text-xs text-slate-500; }
+      .h3 { @apply text-sm font-semibold text-slate-300 mb-3; }
+      .checks li { @apply flex items-start gap-2; }
+      .checks li::before { content: '✓'; @apply text-green-500 shrink-0; }
+      .tbl { @apply w-full text-xs text-left border-collapse; }
+      .tbl th { @apply text-slate-300 font-semibold py-2 pr-4 border-b border-white/10; }
+      .tbl td { @apply text-slate-400 py-2 pr-4 border-b border-white/5 align-top; }
+      details.proc { @apply rounded-xl bg-slate-900/40 border border-white/5; }
+      details.proc > summary { @apply cursor-pointer px-4 py-3 text-sm font-semibold text-slate-200 hover:text-green-400; }
+      details.proc > div { @apply px-4 pb-4 space-y-3 text-sm text-slate-400; }
+    }
+  </style>
   <style>
     html { scroll-behavior: smooth; }
-    .step { scroll-margin-top: 100px; }
+    .step, #runbook, #runbook details { scroll-margin-top: 100px; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans antialiased">
-  
+<body class="overflow-x-hidden bg-slate-900 text-slate-100 font-sans antialiased">
+
   <div class="fixed top-0 inset-x-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-white/5">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
       <span class="text-xs text-slate-400 whitespace-nowrap font-medium">
-        Step <span id="prog-current">1</span> of <span id="prog-total">10</span>
+        Step <span id="prog-current">1</span> of <span id="prog-total"></span>
       </span>
       <div class="flex-1 bg-slate-700 rounded-full h-1.5 overflow-hidden">
         <div id="prog-fill" class="bg-green-500 h-full rounded-full transition-[width] duration-500 ease-in-out" style="width:0%"></div>
       </div>
-      <span id="prog-label" class="text-xs text-slate-400 truncate max-w-[160px]">Prerequisites</span>
+      <span id="prog-label" class="hidden sm:inline text-xs text-slate-400 truncate max-w-[160px]"></span>
+      <a href="#runbook" class="text-xs text-amber-400 hover:text-amber-300 whitespace-nowrap">Runbook ↓</a>
     </div>
   </div>
 
   <main class="max-w-3xl mx-auto px-4 sm:px-6 pt-24 pb-16 space-y-8">
-    
+
     <header class="text-center space-y-4 py-8">
       <h1 class="text-4xl font-bold text-green-500">EdgeTelemetry</h1>
-      <p class="text-xl text-slate-300">Interactive Deployment Guide</p>
+      <p class="text-xl text-slate-300">Deployment Guide &amp; Runbook — Go stack, single-host</p>
       <p class="text-sm text-slate-400 max-w-2xl mx-auto">
-        Deploy a production-ready telemetry system with Kafka, Redis caching, and web dashboard on Linux — Ubuntu/Debian, RHEL/Rocky/Alma, or SLES/openSUSE.
+        First deployment on a new Linux host (steps 1–10), then the on-call runbook: upgrades, rollback, troubleshooting and commands.
       </p>
     </header>
 
-    <section class="rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8">
+    <section class="card">
       <h2 class="text-lg font-semibold text-slate-100 mb-4">What You'll Build</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-        <div class="flex items-start gap-3">
-          <span class="text-green-500 shrink-0">✓</span>
-          <div>
-            <div class="font-semibold text-slate-200">Telemetry Collector</div>
-            <div class="text-slate-400">Port 8001 - Data ingestion API</div>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-green-500 shrink-0">✓</span>
-          <div>
-            <div class="font-semibold text-slate-200">Telemetry Processor</div>
-            <div class="text-slate-400">Port 8002 - Data processing</div>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-green-500 shrink-0">✓</span>
-          <div>
-            <div class="font-semibold text-slate-200">Dashboard API</div>
-            <div class="text-slate-400">Port 8003 - Query API with Redis</div>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-green-500 shrink-0">✓</span>
-          <div>
-            <div class="font-semibold text-slate-200">Kafka + Zookeeper</div>
-            <div class="text-slate-400">Message broker infrastructure</div>
-          </div>
-        </div>
-        <div class="flex items-start gap-3">
-          <span class="text-green-500 shrink-0">✓</span>
-          <div>
-            <div class="font-semibold text-slate-200">Redis + Kafka UI</div>
-            <div class="text-slate-400">Caching and monitoring</div>
-          </div>
-        </div>
-      </div>
+      <pre class="bg-slate-950 rounded-xl px-5 py-4 text-xs text-cyan-200 font-mono overflow-x-auto leading-relaxed mb-4">Mobile app ─HTTPS─► nginx :443 ─┬─ /collector-go/ ─► Collector-Go     127.0.0.1:8001
+Dashboard  ─HTTPS─►             ├─ /processor-go/ ─► Processor-Go     127.0.0.1:8002
+                                └─ /api/          ─► RUM Analytics Go 127.0.0.1:8003
+
+Collector-Go ─► Kafka (telemetry-upsert) ─► Processor-Go ─► PostgreSQL (external)
+RUM Analytics Go ◄── PostgreSQL + Redis   ·   API keys: Analytics ─► rum-api-keys ─► Collector</pre>
+      <ul class="checks grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-400">
+        <li><span><b class="text-slate-200">Collector-Go</b>: ingest API, validates API keys</span></li>
+        <li><span><b class="text-slate-200">Processor-Go</b>: Kafka consumer, writes <span class="ic">rum_*</span> tables</span></li>
+        <li><span><b class="text-slate-200">RUM Analytics Go</b>: dashboard API</span></li>
+        <li><span><b class="text-slate-200">Kafka + Zookeeper</b>: broker (not published)</span></li>
+        <li><span><b class="text-slate-200">Redis</b>: cache + rate limits (not published, password required)</span></li>
+        <li><span><b class="text-slate-200">Kafka UI</b>: loopback only, login, SSH tunnel</span></li>
+      </ul>
+      <p class="hint mt-4">PostgreSQL is never bundled. Every service port binds <span class="ic">127.0.0.1</span>; only nginx faces the network.</p>
     </section>
 
-    <section id="step-0" data-step="0" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 ring-green-500/30 border-l-4 border-green-500 transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">1</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Prerequisites Check</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Verify your system meets the requirements.</p>
-        </div>
-      </div>
+    <!-- ===================================================== STEPS ===================================================== -->
 
+    <section class="step card" data-label="Prerequisites">
+      <div class="step-head"><h2>Prerequisites Check</h2><p>Confirm the host and the inputs you need before touching the server.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>This guide assumes a fresh Linux server with sudo access and internet connectivity. Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, and SLES/openSUSE are supported — the setup script detects which and installs the right packages.</p>
-        </div>
-
-        <div class="space-y-3">
-          <h3 class="text-sm font-semibold text-slate-300">Required:</h3>
-          <ul class="space-y-2 text-sm text-slate-400">
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Linux server: Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, or SLES/openSUSE</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Minimum 4GB RAM, 2 CPU cores</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>20GB free disk space</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Sudo/root access</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Internet access available on the server</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Ports 8001-8003, 8080, 6379 available</span>
-            </li>
+        <div>
+          <h3 class="h3">Host</h3>
+          <ul class="checks space-y-2 text-sm text-slate-400">
+            <li><span>Linux: Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, or SLES/openSUSE (the setup script detects which)</span></li>
+            <li><span>4 GB RAM and 2 CPU cores recommended (2 GB minimum)</span></li>
+            <li><span>Disk under <span class="ic">/var</span> (Docker volumes) for the Kafka disk budget (default 120 GB) plus ~10 GB for images</span></li>
+            <li><span>sudo access; outbound internet to Docker Hub and ghcr.io for image pulls</span></li>
+            <li><span>Inbound: 80 and 443 (plus SSH) only. Nothing else needs to be opened.</span></li>
           </ul>
         </div>
+        <div>
+          <h3 class="h3">Inputs to collect</h3>
+          <ul class="checks space-y-2 text-sm text-slate-400">
+            <li><span>Existing PostgreSQL <span class="ic">edge_db</span>, reachable <b>from inside containers</b> (a real host/IP, never <span class="ic">localhost</span>). The DB role must own the <span class="ic">public.rum_*</span> tables and <span class="ic">analytics.v_mobile_rum_rca_evidence</span>.</span></li>
+            <li><span>The exact <span class="ic">EDGE_JWT_SECRET</span> used by edge_platform</span></li>
+            <li><span>Dashboard and app origins for CORS</span></li>
+            <li><span>Domain name pointing at the server, and its TLS files <span class="ic">fullchain.pem</span> + <span class="ic">privkey.pem</span></span></li>
+          </ul>
+        </div>
+        <div class="note-danger">
+          <span class="shrink-0">⛔</span>
+          <div>
+            <p class="font-semibold mb-1">Replacing the Python stack?</p>
+            <p class="text-red-300/80">Both stacks use the same container names and ports and cannot run together. Stop the Python stack first with <span class="ic">make down</span> in its <span class="ic">deployments/single-host</span> directory. Never <span class="ic">make clean</span> or <span class="ic">docker compose down -v</span>: the Kafka volume holds queued messages and offsets the Go stack takes over.</p>
+          </div>
+        </div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(0)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Check the distro: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">cat /etc/os-release</code> (or <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">bash getstarted.sh --detect-only</code> to see what the script detects)</li>
-          <li>Verify ports: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo netstat -tulpn | grep -E '(8001|8002|8003|8080|6379)'</code></li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Check the distro: <span class="ic">cat /etc/os-release</span> (or <span class="ic">bash getstarted.sh --detect-only</span>)</li>
+        <li>Ports already in use: <span class="ic">sudo ss -tlnp | grep -E ':(80|443|8001|8002|8003|8080) '</span></li>
+        <li>Python stack still up: <span class="ic">docker ps --format '{{.Names}}' | grep telemetry-</span></li>
       </div>
     </section>
 
-    <section id="step-1" data-step="1" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">2</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Configure Environment</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Set up database credentials and application settings before running setup script.</p>
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>Configure your database connection and JWT settings. You'll use these values when the setup script prompts you in Step 3.</p>
-        </div>
-
-        <div class="space-y-4">
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Database Configuration</h3>
-          
+    <section class="step card" data-label="Configure">
+      <div class="step-head"><h2>Build the Configuration</h2><p>Fill in the form; the two env files below update live. Nothing leaves your browser.</p></div>
+      <div class="space-y-6">
+        <div>
+          <h3 class="h3">Database</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Database Username</label>
-              <input type="text" id="db-user" placeholder="db-user" value="db-user"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            </div>
-            
-            <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Database Password</label>
-              <input type="password" id="db-password" placeholder="db-password"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            </div>
-            
-            <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Database Server IP</label>
-              <input type="text" id="db-host" placeholder="127.0.0.1"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            </div>
-            
-            <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Database Port</label>
-              <input type="text" id="db-port" placeholder="5433" value="5433"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            </div>
-            
-            <div class="space-y-1.5 sm:col-span-2">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Database Name</label>
-              <input type="text" id="db-name" placeholder="edge_db" value="edge_db"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            </div>
+            <div class="space-y-1.5"><label class="lbl" for="db-user">Username</label><input id="db-user" class="field cfg" placeholder="edge_user"></div>
+            <div class="space-y-1.5"><label class="lbl" for="db-password">Password</label><input id="db-password" type="password" class="field cfg" placeholder="db-password"></div>
+            <div class="space-y-1.5"><label class="lbl" for="db-host">Host / IP</label><input id="db-host" class="field cfg" placeholder="10.0.0.5"><p class="hint">Not <span class="ic">localhost</span>: it must resolve from inside Docker.</p></div>
+            <div class="space-y-1.5"><label class="lbl" for="db-port">Port</label><input id="db-port" class="field cfg" value="5432"></div>
+            <div class="space-y-1.5"><label class="lbl" for="db-name">Database</label><input id="db-name" class="field cfg" value="edge_db"></div>
+            <div class="space-y-1.5"><label class="lbl" for="db-sslmode">SSL mode</label>
+              <select id="db-sslmode" class="field cfg"><option>disable</option><option>require</option><option>verify-full</option></select></div>
           </div>
         </div>
 
-        <div class="space-y-4">
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">JWT Authentication Settings</h3>
-          
+        <div>
+          <h3 class="h3">Dashboard authentication</h3>
           <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">JWT Secret</label>
-            <input type="password" id="jwt-secret" placeholder="dev-only-secret-change-in-prod"
-              class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-            <p class="text-xs text-slate-500">Use a strong, random secret for production deployments.</p>
+            <label class="lbl" for="jwt-secret">EDGE_JWT_SECRET</label>
+            <input id="jwt-secret" type="password" class="field cfg" placeholder="paste edge_platform's secret">
+            <p class="hint">Must equal edge_platform's value byte for byte (watch trailing spaces). A mismatch makes every dashboard call return 401.</p>
           </div>
-          
+          <div class="note-warn mt-4">
+            <span class="shrink-0">⚠</span>
+            <p>Do <b>not</b> add <span class="ic">EDGE_JWT_ISSUER</span> or <span class="ic">EDGE_JWT_AUDIENCE</span>. edge_platform tokens carry no <span class="ic">iss</span>/<span class="ic">aud</span>, so setting either rejects every token. <span class="ic">EDGE_ALLOW_JWT_FALLBACK</span> stays <span class="ic">false</span>.</p>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="h3">Origins &amp; sizing</h3>
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <label class="lbl" for="origins">Allowed origins (comma-separated)</label>
+              <input id="origins" class="field cfg" value="capacitor://localhost,https://localhost,http://localhost">
+              <p class="hint">Add the dashboard origin, e.g. <span class="ic">https://dashboard.example.com</span>. Written to both <span class="ic">CORS_ALLOWED_ORIGINS</span> (collector) and <span class="ic">ALLOWED_ORIGINS</span> (analytics).</p>
+            </div>
+            <div class="space-y-1.5">
+              <label class="lbl" for="kafka-budget">Kafka disk budget (GB)</label>
+              <input id="kafka-budget" type="number" min="12" class="field cfg" value="120">
+              <p class="hint">Total disk <span class="ic">telemetry-upsert</span> may use (split over 12 partitions). Kafka shares the disk with everything else: leave headroom.</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="h3">Generated secrets</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">JWT Issuer</label>
-              <input type="text" id="jwt-issuer" placeholder="edge-control-plane" value="edge-control-plane"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
+              <label class="lbl" for="redis-password">Redis password</label>
+              <div class="flex gap-2"><input id="redis-password" class="field cfg"><button type="button" data-regen="redis-password" class="text-xs text-slate-400 hover:text-green-400 px-2" aria-label="Regenerate Redis password">↻</button></div>
             </div>
-            
             <div class="space-y-1.5">
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">JWT Audience</label>
-              <input type="text" id="jwt-audience" placeholder="edge-dashboard" value="edge-dashboard"
-                class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
+              <label class="lbl" for="kafka-ui-password">Kafka UI password (user admin)</label>
+              <div class="flex gap-2"><input id="kafka-ui-password" class="field cfg"><button type="button" data-regen="kafka-ui-password" class="text-xs text-slate-400 hover:text-green-400 px-2" aria-label="Regenerate Kafka UI password">↻</button></div>
             </div>
           </div>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
-          <span class="shrink-0">⚠</span>
-          <div>
-            <p class="font-semibold mb-1">Database Connection String</p>
-            <p class="text-amber-300/80">When running getstarted.sh in Step 3, copy the host and port values below when prompted.</p>
-          </div>
+          <p class="hint mt-2">Random, generated in your browser. Store them in your password manager.</p>
         </div>
 
         <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Generated .env Configuration</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">.env</span>
-              <button onclick="copyFullEnvFile()" class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre id="full-env-preview" class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code># ===== Shared App Settings (Processor + RUM Analytics) =====
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-CACHE_EXPIRE_SECONDS=300
-
-# ===== Database (shared) =====
-DATABASE_URL=<span class="text-amber-400">postgresql+asyncpg://[user]:[password]@[host]:[port]/[database]</span>
-
-# ===== Kafka (shared) =====
-KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-KAFKA_TOPIC=telemetry-upsert
-
-# ===== Redis (shared) =====
-REDIS_HOST=telemetry-redis
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# ===== API defaults (can be overridden per service) =====
-API_HOST=0.0.0.0
-
-# ===== AUTH =====
-EDGE_JWT_ALG=HS256
-EDGE_JWT_SECRET=<span class="text-amber-400">dev-only-secret-change-in-prod</span>
-EDGE_JWT_ISSUER=<span class="text-amber-400">edge-control-plane</span>
-EDGE_JWT_AUDIENCE=<span class="text-amber-400">edge-dashboard</span>
-EDGE_JWT_ACCESS_MINUTES=120
-EDGE_ALLOW_JWT_FALLBACK=true</code></pre>
-          </div>
-          <p class="text-xs text-slate-400 mt-2">This configuration will be saved to your deployment package in Step 5.</p>
+          <h3 class="h3">configs/single-host.env</h3>
+          <div class="cmd-block" data-label="single-host.env"><code id="env-single-host"></code></div>
         </div>
+        <div>
+          <h3 class="h3">configs/kafka-ui.env</h3>
+          <div class="cmd-block" data-label="kafka-ui.env"><code id="env-kafka-ui"></code></div>
+        </div>
+        <p class="hint">You paste both files onto the server in step 6. The page keeps nothing: a refresh wipes the form.</p>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(1)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Tips:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Get database credentials from your infrastructure team before proceeding</li>
-          <li>Use a strong, random JWT secret for production (not the default)</li>
-          <li>Save the generated .env content - you'll need it in Step 5</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Special characters in the DB password are URL-encoded into <span class="ic">DATABASE_URL</span> automatically</li>
+        <li>Get the DB credentials and JWT secret from the infrastructure / edge_platform owners before continuing</li>
       </div>
     </section>
 
-    <section id="step-2" data-step="2" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">3</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Server Preparation</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Run the automated setup script to install dependencies and validate the server.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Server Setup">
+      <div class="step-head"><h2>Prepare the Server</h2><p>Run the setup script on the server once.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>The <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">getstarted.sh</code> script will install Docker, Nginx, validate mount points, check ports, and create required directories.</p>
-        </div>
-
+        <div class="cmd-block"><code>wget https://raw.githubusercontent.com/mktowett/edge_telemetry_runbook/main/getstarted.sh
+sudo bash getstarted.sh</code></div>
+        <div class="note-warn"><span class="shrink-0">⚠</span><p>It prompts for the PostgreSQL host and port from step 2, and tests that the server can reach them.</p></div>
         <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 1: Download the setup script</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">bash</span>
-              <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>wget https://raw.githubusercontent.com/mktowett/edge_telemetry_runbook/main/getstarted.sh</code></pre>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 2: Make it executable</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">bash</span>
-              <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>chmod +x getstarted.sh</code></pre>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 3: Run the script with sudo</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">bash</span>
-              <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>sudo bash getstarted.sh</code></pre>
-          </div>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
-          <span class="shrink-0">⚠</span>
-          <div>
-            <p class="font-semibold mb-1">Interactive Prompts</p>
-            <p class="text-amber-300/80">The script will ask for PostgreSQL host and port. Use the values you configured in Step 2.</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">What the script does:</h3>
-          <ul class="space-y-2 text-sm text-slate-400">
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Detects the distro family (apt / dnf / zypper) and validates RAM (4GB+) and swap (16GB recommended)</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Checks mount points: /, /var (100GB), /opt (80GB), /data (200GB)</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Installs Docker Engine, Docker Compose, Nginx, make, unzip, curl</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Validates port availability (80, 443, 8001-8003, 8080, 6379)</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Opens the service ports on firewalld or ufw, whichever the host runs</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Tests PostgreSQL connectivity</span>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-green-500 shrink-0">✓</span>
-              <span>Creates directories: /opt/edgetelemetry, /opt/edge-telemetry, /data/edgetelemetry</span>
-            </li>
+          <h3 class="h3">What the script does</h3>
+          <ul class="checks space-y-2 text-sm text-slate-400">
+            <li><span>Detects the distro (apt / dnf / zypper); checks RAM, swap and mount points (warnings only)</span></li>
+            <li><span>Installs Docker Engine + Compose plugin, nginx, make, unzip, curl</span></li>
+            <li><span>Opens <b>80 and 443</b> on firewalld or ufw, whichever is active (service ports stay closed)</span></li>
+            <li><span>Checks ports 80, 443, 8001–8003 and 8080 are free</span></li>
+            <li><span>Creates <span class="ic">/opt/edgetelemetry</span> (owned by you) and <span class="ic">/opt/edge-telemetry</span></span></li>
           </ul>
         </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <span class="shrink-0">✓</span>
-          <div>
-            <p class="font-semibold mb-1">Expected Completion Time</p>
-            <p class="text-green-300/80">5-10 minutes depending on internet speed and system updates.</p>
-          </div>
-        </div>
+        <div class="cmd-block" data-label="then"><code>newgrp docker   # or log out and back in, so docker works without sudo</code></div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(2)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Permission denied: Ensure you're running with <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo</code></li>
-          <li>Mount warnings: Review output and provision dedicated volumes for production</li>
-          <li>Port conflicts: Stop conflicting services or adjust port mappings</li>
-          <li>PostgreSQL unreachable: Verify DB host/port and firewall whitelist</li>
-          <li>Docker group: Run <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">newgrp docker</code> after script completes</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>RHEL with no repos: the script prints the <span class="ic">subscription-manager</span> steps and stops</li>
+        <li>Mount warnings: provision dedicated volumes for production, then re-run</li>
+        <li>PostgreSQL unreachable: check host/port and that this server's IP is allowed on the DB firewall</li>
       </div>
     </section>
 
-    <section id="step-3" data-step="3" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">4</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Download Deployment Package</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Get the latest code from GitHub.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Download">
+      <div class="step-head"><h2>Download the Deployment Package</h2><p>To your workstation.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <div>
-            <p class="font-semibold mb-1">Download Deployment Package</p>
-            <p class="text-blue-300/80">Download the latest EdgeTelemetry deployment package to your local machine.</p>
-          </div>
-        </div>
-
         <div class="rounded-xl bg-slate-700/50 border border-white/5 p-4">
-          <div class="flex items-start justify-between gap-4 mb-3">
-            <div class="flex-1 min-w-0">
-              <h4 class="text-sm font-semibold text-slate-100">EdgeTelemetry Deployment Package</h4>
-              <p class="text-xs text-slate-400 mt-1">Complete deployment files including Docker Compose, scripts, and configurations</p>
-            </div>
-          </div>
-          
-          <a href="downloads/EdgeTelemetryDeployment.zip" download="EdgeTelemetryDeployment.zip" class="inline-flex items-center gap-2.5 bg-green-500 hover:bg-green-400 text-white font-semibold text-sm px-6 py-3 rounded-lg shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 no-underline">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
+          <h4 class="text-sm font-semibold text-slate-100">edge_telemetry_deployment_go.zip</h4>
+          <p class="text-xs text-slate-400 mt-1 mb-3">Compose file with pinned images, Makefile, env templates, DB baseline SQL, Kafka scripts, nginx sample.</p>
+          <a href="downloads/edge_telemetry_deployment_go.zip" download class="inline-flex items-center gap-2.5 bg-green-500 hover:bg-green-400 text-white font-semibold text-sm px-6 py-3 rounded-lg shadow-lg shadow-green-500/25 transition-all duration-200 hover:-translate-y-0.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             Download Deployment Package
           </a>
         </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <span class="shrink-0">✓</span>
-          <div>
-            <p class="font-semibold mb-1">What's Included</p>
-            <ul class="text-green-300/80 space-y-1 text-xs list-disc list-inside">
-              <li>Docker Compose configuration files</li>
-              <li>Environment setup scripts</li>
-              <li>Nginx reverse proxy templates</li>
-              <li>Service deployment manifests</li>
-              <li>Database migration scripts</li>
-            </ul>
-          </div>
-        </div>
+        <p class="hint">The package contains templates only, never real env files or keys.</p>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(3)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>401 Error: Check your PAT has <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">repo</code> scope</li>
-          <li>404 Error: Verify you have access to NCG-Africa/EdgeTelemetryDeployment</li>
-          <li>Network Error: Check your internet connection</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Download blocked: fetch it on another machine and copy it over; it is a plain zip</li>
       </div>
     </section>
 
-    <section id="step-4" data-step="4" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">5</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Server Access Details</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Set your SSH username and server IP for transfer commands.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Transfer">
+      <div class="step-head"><h2>Transfer to the Server</h2><p>Copy the zip up and unpack it.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>These values will be used automatically in the SCP and SSH commands in the next step.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="space-y-1.5"><label class="lbl" for="server-username">SSH user</label><input id="server-username" class="field srv" value="ubuntu"></div>
+          <div class="space-y-1.5"><label class="lbl" for="server-ip">Server IP</label><input id="server-ip" class="field srv" placeholder="203.0.113.10"></div>
+          <div class="space-y-1.5"><label class="lbl" for="server-port">SSH port</label><input id="server-port" class="field srv" value="22"></div>
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">SSH Username</label>
-            <input type="text" id="server-username" placeholder="ubuntu" value="user"
-              class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">Server IP</label>
-            <input type="text" id="server-ip" placeholder="127.0.0.1"
-              class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-          </div>
-        </div>
-
-        <p class="text-xs text-slate-500">Example target: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded">ubuntu@127.0.0.1</code></p>
+        <h3 class="h3">From your workstation</h3>
+        <div class="cmd-block"><code id="cmd-scp"></code></div>
+        <h3 class="h3">On the server</h3>
+        <div class="cmd-block"><code id="cmd-unpack"></code></div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(4)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Unknown username: Use the SSH user configured on your server</li>
-          <li>IP not reachable: Verify your server public IP and security group/firewall rules</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Permission denied writing <span class="ic">/opt/edgetelemetry</span>: re-run <span class="ic">getstarted.sh</span> as the same user (it chowns the directory to you)</li>
+        <li>Connection refused: check the SSH port and the server firewall / security group</li>
       </div>
     </section>
 
-    <section id="step-5" data-step="5" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">6</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Transfer Files to Server</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Upload the deployment package to your server.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Write Config">
+      <div class="step-head"><h2>Write the Config and Validate</h2><p>Paste the two files from step 2, then check them.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>Extract the ZIP file locally, then use SCP to transfer files to your server.</p>
-        </div>
-
-        <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-            <span class="text-xs text-slate-500 font-mono">bash</span>
-            <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy
-            </button>
-          </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code id="transfer-scp-command">scp -r EdgeTelemetryDeployment/ user@&lt;server-ip&gt;:~/</code></pre>
-        </div>
-
-        <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-            <span class="text-xs text-slate-500 font-mono">bash</span>
-            <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy
-            </button>
-          </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code id="transfer-ssh-command">ssh user@&lt;server-ip&gt;</code></pre>
-        </div>
+        <div class="cmd-block"><code>nano configs/single-host.env   # paste configs/single-host.env from step 2
+nano configs/kafka-ui.env      # paste configs/kafka-ui.env from step 2
+chmod 600 configs/*.env
+make config-check</code></div>
+        <div class="note-ok"><span class="shrink-0">✓</span><p><span class="ic">make config-check</span> must pass. It rejects placeholder DB credentials, a missing or <span class="ic">CHANGE_ME</span> Redis password, a missing Kafka UI password or disk budget, and JWT fallback in prod.</p></div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(5)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Permission denied: Check SSH key setup or use password authentication</li>
-          <li>Connection refused: Verify server IP and SSH port (default 22)</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Each error message and its fix: <a href="#rb-config-check" class="text-blue-400 hover:text-blue-300">Runbook → config-check failures</a></li>
       </div>
     </section>
 
-    <section id="step-6" data-step="6" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">7</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Deploy Services</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Start all EdgeTelemetry services using Docker Compose.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="DB Baseline">
+      <div class="step-head"><h2>Baseline the Database</h2><p>Once per database. <span class="ic">make deploy</span> refuses to run without it.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
-          <span class="shrink-0">⚠</span>
-          <p>Before deploying, create the config from the template and paste in the values from Step 2:<br><code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">cp deployments/single-host/configs/single-host.env.example deployments/single-host/configs/single-host.env</code></p>
-        </div>
-
-        <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-            <span class="text-xs text-slate-500 font-mono">bash</span>
-            <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy
-            </button>
-          </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>cd ~/EdgeTelemetryDeployment</code></pre>
-        </div>
-
-        <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-            <span class="text-xs text-slate-500 font-mono">bash</span>
-            <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy
-            </button>
-          </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy</code></pre>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>This will start all services in detached mode. Initial startup takes 2-3 minutes.</p>
-        </div>
+        <div class="cmd-block"><code>make db-baseline</code></div>
+        <p class="text-sm text-slate-400">The Go services need a newer schema than the v012 <span class="ic">edge_db</span>; Processor-Go's own migrations fail on a raw v012 database. The script checks for duplicate <span class="ic">rum_apps.package_name</span> and <span class="ic">rum_users.user_id</span> rows, asks for confirmation, then applies <span class="ic">shared/sql/go_baseline.sql</span> in one transaction. It drops and recreates <span class="ic">analytics.v_mobile_rum_rca_evidence</span>. Re-running is a no-op.</p>
+        <div class="note-warn"><span class="shrink-0">⚠</span><p>The <span class="ic">rum_*</span> tables are shared with the analytics team. Tell the DB owner before running it.</p></div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(6)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Docker not installed: re-run <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo bash getstarted.sh</code> — it installs Docker CE for your distro</li>
-          <li>Permission denied: Add user to docker group <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">sudo usermod -aG docker $USER</code></li>
-          <li>Port conflicts: Check if ports are already in use</li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Duplicates or permission errors: <a href="#rb-baseline" class="text-blue-400 hover:text-blue-300">Runbook → DB baseline</a></li>
       </div>
     </section>
 
-    <section id="step-7" data-step="7" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">8</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Verify Deployment</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Check that all services are running correctly.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Deploy">
+      <div class="step-head"><h2>Deploy</h2><p>Start the stack.</p></div>
       <div class="space-y-4">
-        <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-          <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-            <span class="text-xs text-slate-500 font-mono">bash</span>
-            <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-              </svg>
-              Copy
-            </button>
-          </div>
-          <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make health</code></pre>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <span class="shrink-0">✓</span>
-          <div>
-            <p class="font-semibold mb-1">Expected Output:</p>
-            <p class="text-green-300/80">All services should return HTTP 200 or show "healthy" status.</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Service Endpoints:</h3>
-          <div class="space-y-2 text-sm">
-            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
-              <span class="text-slate-400">Telemetry Collector</span>
-              <code id="endpoint-collector" class="text-cyan-300 font-mono text-xs">http://&lt;server-ip&gt;:8001</code>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
-              <span class="text-slate-400">Telemetry Processor</span>
-              <code id="endpoint-processor" class="text-cyan-300 font-mono text-xs">http://&lt;server-ip&gt;:8002</code>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
-              <span class="text-slate-400">Dashboard API</span>
-              <code id="endpoint-dashboard" class="text-cyan-300 font-mono text-xs">http://&lt;server-ip&gt;:8003</code>
-            </div>
-            <div class="flex items-center justify-between p-3 rounded-lg bg-slate-900/50">
-              <span class="text-slate-400">Kafka UI</span>
-              <code id="endpoint-kafka-ui" class="text-cyan-300 font-mono text-xs">http://&lt;server-ip&gt;:8080</code>
-            </div>
-          </div>
-        </div>
+        <div class="cmd-block"><code>make deploy</code></div>
+        <ol class="list-decimal list-inside space-y-1 text-sm text-slate-400">
+          <li>Runs <span class="ic">config-check</span></li>
+          <li>Aborts if the DB baseline is missing</li>
+          <li>Creates <span class="ic">/opt/edge-telemetry</span> (asks for sudo)</li>
+          <li><span class="ic">docker compose up -d</span>: <span class="ic">kafka-init</span> creates the topics first, then the services start</li>
+          <li>Waits 60 s, health-checks, restarts the processor once if unhealthy</li>
+        </ol>
+        <div class="note-info"><span class="shrink-0">ℹ</span><p>First start runs the processor's and analytics' DB migrations, which can take several minutes. The collector answers 503 until it has loaded the API keys from <span class="ic">rum-api-keys</span>. Re-check with <span class="ic">make health</span>.</p></div>
       </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(7)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Troubleshooting:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Check logs: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make deploy-logs</code></li>
-          <li>Restart services: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">make deploy-restart</code></li>
-          <li>Check container status: <code class="bg-slate-900/50 px-1.5 py-0.5 rounded text-xs">docker ps</code></li>
-        </ul>
+      <div class="trouble-panel">
+        <li>Which containers are up: <span class="ic">make status</span>; logs: <span class="ic">make logs-processor</span> (or collector, rum-analytics, redis, kafka)</li>
+        <li>Processor restart loop with <span class="ic">dirty</span> in logs: <a href="#rb-dirty" class="text-blue-400 hover:text-blue-300">Runbook → dirty migration</a></li>
+        <li><span class="ic">permission denied ... docker.sock</span>: run <span class="ic">newgrp docker</span> or log in again</li>
       </div>
     </section>
 
-    <section id="step-8" data-step="8" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">9</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Configure Nginx & SSL</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Set up reverse proxy for <code>/api</code> and <code>/collector</code> with client-provided SSL certificates.</p>
-        </div>
-      </div>
-
+    <section class="step card" data-label="Nginx/SSL">
+      <div class="step-head"><h2>Configure nginx &amp; TLS</h2><p>Services listen on 127.0.0.1 only; nginx terminates TLS and proxies.</p></div>
       <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300">
-          <span class="shrink-0">ℹ</span>
-          <p>Use a client-provided domain when available. If no domain is provided, use the server IP and the certificate files (<code>fullchain.pem</code> and <code>privkey.pem</code>).</p>
-        </div>
-
         <div class="space-y-1.5">
-          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-widest">
-            Domain Name (Client-Provided)
-          </label>
-          <input type="text" id="nginx-domain" placeholder="api.yourdamin.com or 127.0.0.1(server-ip)"
-            class="w-full bg-slate-700 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-100 font-mono placeholder-slate-500 focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/40 transition-all duration-200">
-          <p id="nginx-domain-note" class="text-xs text-slate-500">Use the same domain name that appears in the certificate files. If not provided, enter Server IP in Step 5 (Server Access Details).</p>
+          <label class="lbl" for="nginx-domain">Domain name</label>
+          <input id="nginx-domain" class="field srv" placeholder="rum.example.com">
+          <p id="nginx-domain-note" class="hint"></p>
         </div>
 
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 1: Deploy Nginx configuration</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">bash</span>
-              <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>sudo nano /etc/nginx/sites-available/edgetelemetry</code></pre>
-          </div>
-          <p class="text-xs text-slate-400 mt-2">Open the file now; paste the configuration from Step 2, then save (Ctrl+O), Enter, and exit (Ctrl+X).</p>
-        </div>
+        <h3 class="h3">1. Upload the certificate files (from your workstation)</h3>
+        <div class="cmd-block"><code id="cmd-ssl-scp"></code></div>
 
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 2: Create Nginx configuration</h3>
-          <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-            <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-              <span class="text-xs text-slate-500 font-mono">nginx.conf</span>
-              <button onclick="copyNginxConfig()" class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-                Copy
-              </button>
-            </div>
-            <pre id="nginx-config" class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>server {
-    listen 80;
-    listen [::]:80;
-    server_name <span class="text-amber-400">api.yourdomain.com</span>;
-    return 301 https://$host$request_uri;
-}
+        <h3 class="h3">2. Install them (on the server)</h3>
+        <div class="cmd-block"><code id="cmd-ssl-install"></code></div>
 
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name <span class="text-amber-400">api.yourdomain.com</span>;
+        <h3 class="h3">3. Write the site config</h3>
+        <div class="cmd-block"><code>sudo nano /etc/nginx/conf.d/edgetelemetry.conf   # paste the config below</code></div>
+        <div class="cmd-block" data-label="edgetelemetry.conf"><code id="nginx-config"></code></div>
+        <p class="hint"><span class="ic">conf.d/</span> works on every distro. On Debian/Ubuntu also remove the default site: <span class="ic">sudo rm -f /etc/nginx/sites-enabled/default</span>. Kafka UI is deliberately not proxied: reach it over an SSH tunnel.</p>
 
-    ssl_certificate /etc/nginx/ssl/<span class="text-amber-400">api.yourdomain.com</span>/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/<span class="text-amber-400">api.yourdomain.com</span>/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
+        <h3 class="h3">4. RHEL family only: let nginx reach the upstreams</h3>
+        <div class="cmd-block"><code>sudo setsebool -P httpd_can_network_connect 1</code></div>
 
-    location ^~ /collector/ {
-        proxy_pass http://127.0.0.1:8001/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+        <h3 class="h3">5. Validate and reload</h3>
+        <div class="cmd-block"><code>sudo nginx -t && sudo systemctl reload nginx</code></div>
 
-    location ^~ /api/ {
-        proxy_pass http://127.0.0.1:8003;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300;
-    }
-
-    location / {
-        return 404;
-    }
-}</code></pre>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 3: Enable Nginx site</h3>
-          <div class="space-y-2">
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>sudo ln -sf /etc/nginx/sites-available/edgetelemetry /etc/nginx/sites-enabled/edgetelemetry</code></pre>
-            </div>
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>sudo rm -f /etc/nginx/sites-enabled/default</code></pre>
-            </div>
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>ls -l /etc/nginx/sites-enabled/</code></pre>
-            </div>
-          </div>
-          <p class="text-xs text-slate-400 mt-2">Certificate validation and Nginx reload are handled in Step 6.</p>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300">
-          <span class="shrink-0">⚠</span>
-          <div>
-            <p class="font-semibold mb-1">SSL Certificates (Client-Provided)</p>
-            <p class="text-amber-300/80">Upload the certificate files from the client, then place them under <code id="ssl-cert-path">/etc/nginx/ssl/api.yourdomain.com/</code>.</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 4: Upload certificate files to the server</h3>
-          <div class="space-y-2">
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code id="ssl-scp-command">scp fullchain.pem privkey.pem user@&lt;server-ip&gt;:/tmp/</code></pre>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 5: Install cert files and set permissions</h3>
-          <div class="space-y-2">
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code id="ssl-install-command">sudo mkdir -p /etc/nginx/ssl/api.yourdomain.com
-sudo mv /tmp/fullchain.pem /etc/nginx/ssl/api.yourdomain.com/fullchain.pem
-sudo mv /tmp/privkey.pem /etc/nginx/ssl/api.yourdomain.com/privkey.pem
-sudo chown root:root /etc/nginx/ssl/api.yourdomain.com/*
-sudo chmod 644 /etc/nginx/ssl/api.yourdomain.com/fullchain.pem
-sudo chmod 600 /etc/nginx/ssl/api.yourdomain.com/privkey.pem</code></pre>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Step 6: Validate and reload Nginx</h3>
-          <div class="space-y-2">
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">bash</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code id="ssl-validate-command">sudo nginx -t
-sudo systemctl reload nginx</code></pre>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+        <div class="note-warn">
           <span class="shrink-0">🔒</span>
-          <div>
-            <p class="font-semibold mb-1">SSL Prerequisites</p>
-            <ul class="list-disc list-inside space-y-1 text-red-300/80 mt-2">
-              <li>Domain name must point to your server's IP address (A record)</li>
-              <li>Port 80 and 443 must be open in your firewall</li>
-              <li>Certificate CN/SAN must match the configured domain</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <span class="shrink-0">✓</span>
-          <div>
-            <p class="font-semibold mb-1">After SSL Configuration</p>
-            <p class="text-green-300/80">Your API is available at <code id="ssl-api-endpoint">https://api.yourdomain.com/api/v1/...</code> and collector at <code id="ssl-collector-endpoint">https://api.yourdomain.com/collector/...</code>.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="mt-8 flex items-center justify-between flex-wrap gap-4">
-        <button class="trouble-toggle text-xs text-slate-500 hover:text-amber-400 transition-colors flex items-center gap-1">
-          ⚠ Having trouble?
-        </button>
-        <button onclick="completeStep(8)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Mark Complete →
-        </button>
-      </div>
-
-      <div class="trouble-panel hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2">
-        <p class="font-semibold">Common Issues:</p>
-        <ul class="list-disc list-inside space-y-1 text-amber-300/80">
-          <li>Nginx test fails: Check syntax errors in configuration file</li>
-          <li>Port 80/443 conflicts: Stop other web servers using these ports</li>
-          <li>SSL file errors: Verify <code>fullchain.pem</code> and <code>privkey.pem</code> paths and permissions</li>
-          <li>Certificate mismatch: Confirm cert domain matches <code>server_name</code></li>
-        </ul>
-      </div>
-    </section>
-
-    <section id="step-9" data-step="9" class="step rounded-2xl bg-slate-800 ring-1 ring-white/5 shadow-lg p-8 opacity-40 pointer-events-none transition-all duration-300">
-      <div class="flex items-start gap-4 mb-6">
-        <div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">10</div>
-        <div class="flex-1 min-w-0">
-          <h2 class="text-base font-semibold text-slate-100">Post-Deployment</h2>
-          <p class="text-sm text-slate-400 mt-0.5">Monitoring, maintenance, and next steps.</p>
-        </div>
-      </div>
-
-      <div class="space-y-4">
-        <div class="flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300">
-          <span class="shrink-0">✓</span>
-          <div>
-            <p class="font-semibold mb-1">Deployment Complete!</p>
-            <p class="text-green-300/80">Your EdgeTelemetry system is now running.</p>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Useful Commands:</h3>
-          <div class="space-y-2">
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">View all logs</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-logs</code></pre>
-            </div>
-
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">Stop all services</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-down</code></pre>
-            </div>
-
-            <div class="cmd-block rounded-xl overflow-hidden border border-white/5">
-              <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
-                <span class="text-xs text-slate-500 font-mono">Restart services</span>
-                <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                  </svg>
-                  Copy
-                </button>
-              </div>
-              <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"><code>make deploy-restart</code></pre>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <h3 class="text-sm font-semibold text-slate-300 mb-3">Resources:</h3>
-          <ul class="space-y-2 text-sm text-slate-400">
-            <li class="flex items-start gap-2">
-              <span class="text-blue-500 shrink-0">→</span>
-              <a href="https://github.com/NCG-Africa/EdgeTelemetryDeployment" target="_blank" class="text-blue-400 hover:text-blue-300 transition-colors">GitHub Repository</a>
-            </li>
-            <li class="flex items-start gap-2">
-              <span class="text-blue-500 shrink-0">→</span>
-              <span>Kafka UI: <code id="resource-kafka-ui-endpoint" class="text-cyan-300 font-mono text-xs">http://&lt;server-ip&gt;:8080</code></span>
-            </li>
+          <ul class="list-disc list-inside space-y-1 text-amber-300/80">
+            <li>The domain's A record must point at this server</li>
+            <li>The certificate CN/SAN must match the domain</li>
+            <li>Ports 80 and 443 open (the setup script did this)</li>
           </ul>
         </div>
       </div>
-
-      <div class="mt-8 flex items-center justify-end">
-        <button onclick="completeStep(9)" class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0">
-          Finish →
-        </button>
+      <div class="trouble-panel">
+        <li><span class="ic">nginx -t</span> fails: check cert paths and permissions, then the config syntax</li>
+        <li>502 after reload: <a href="#rb-502" class="text-blue-400 hover:text-blue-300">Runbook → nginx returns 502</a></li>
+        <li>Editing an existing host: vhosts in <span class="ic">sites-enabled/</span> are often symlinks; find the live file with <span class="ic">sudo nginx -T</span></li>
       </div>
+    </section>
+
+    <section class="step card" data-label="Verify">
+      <div class="step-head"><h2>Verify</h2><p>Every check must pass before you call the deployment done.</p></div>
+      <div class="space-y-4">
+        <h3 class="h3">On the server</h3>
+        <div class="cmd-block"><code>make status   # all containers Up (kafka-init Exited 0)
+make health   # collector ready, processor + analytics healthy</code></div>
+        <h3 class="h3">Through nginx (from anywhere)</h3>
+        <div class="cmd-block"><code id="cmd-verify-public"></code></div>
+        <h3 class="h3">Kafka UI (from your workstation)</h3>
+        <div class="cmd-block"><code id="cmd-tunnel"></code></div>
+        <p class="hint">Then open <span class="ic">http://localhost:8080</span> and log in as <span class="ic">admin</span> with the Kafka UI password from step 2. Both topics (<span class="ic">telemetry-upsert</span>, <span class="ic">rum-api-keys</span>) should exist.</p>
+        <h3 class="h3">End to end</h3>
+        <p class="text-sm text-slate-400">Register an App and API key in the dashboard, send data from an SDK, then confirm it landed:</p>
+        <div class="cmd-block" data-label="sql"><code>SELECT max(created_at) FROM rum_telemetry_events;</code></div>
+        <p class="hint">For a full scripted proof (writes test data; operator consent required) see <a href="#rb-acceptance" class="text-blue-400 hover:text-blue-300">Runbook → Acceptance run</a>.</p>
+      </div>
+      <div class="trouble-panel">
+        <li>Start with <a href="#rb-triage" class="text-blue-400 hover:text-blue-300">Runbook → Triage</a></li>
+        <li>Dashboard 401: <a href="#rb-401" class="text-blue-400 hover:text-blue-300">Runbook → dashboard 401</a></li>
+        <li>Events accepted but no rows: <a href="#rb-not-stored" class="text-blue-400 hover:text-blue-300">Runbook → events not stored</a></li>
+      </div>
+    </section>
+
+    <section id="done" class="card hidden text-center">
+      <p class="text-2xl">🎉</p>
+      <p class="text-lg font-semibold text-green-400">Deployment complete</p>
+      <p class="text-sm text-slate-400 mt-1">Bookmark the runbook below for upgrades and incidents.</p>
+    </section>
+
+    <!-- ===================================================== RUNBOOK ===================================================== -->
+
+    <section id="runbook" class="card space-y-6">
+      <div>
+        <h2 class="text-lg font-semibold text-slate-100">Runbook</h2>
+        <p class="text-sm text-slate-400 mt-1">Run every command inside <span class="ic">/opt/edgetelemetry/edge_telemetry_deployment_go/deployments/single-host</span>.</p>
+      </div>
+
+      <div class="note-danger">
+        <span class="shrink-0">⛔</span>
+        <div>
+          <p class="font-semibold mb-1">Never on a live install</p>
+          <p class="text-red-300/80"><span class="ic">make clean</span>, <span class="ic">docker compose down -v</span>, deleting the <span class="ic">kafka-data</span> volume, or deleting/recreating the <span class="ic">telemetry-upsert</span> topic. Each loses queued messages and the processor's committed offsets, and offset reuse breaks its dedupe.</p>
+        </div>
+      </div>
+
+      <details id="rb-triage" class="proc" open>
+        <summary>Triage: start here</summary>
+        <div>
+          <div class="cmd-block"><code>make status          # which containers are up / restarting
+make health          # which endpoints answer
+make logs-processor  # or: collector | rum-analytics | redis | kafka</code></div>
+          <div class="overflow-x-auto"><table class="tbl">
+            <tr><th>Symptom</th><th>Likely cause</th><th>Go to</th></tr>
+            <tr><td>Processor restart loop, logs mention <span class="ic">dirty</span></td><td>Failed migration</td><td><a href="#rb-dirty" class="text-blue-400">Dirty migration</a></td></tr>
+            <tr><td><span class="ic">make deploy</span> stops at "DB baseline: NOT applied"</td><td>Baseline skipped</td><td><a href="#rb-baseline" class="text-blue-400">DB baseline</a></td></tr>
+            <tr><td><span class="ic">make db-baseline</span> reports duplicates</td><td>Duplicate rows</td><td><a href="#rb-baseline" class="text-blue-400">DB baseline</a></td></tr>
+            <tr><td>nginx returns 502</td><td>Upstream down, wrong vhost, SELinux</td><td><a href="#rb-502" class="text-blue-400">502</a></td></tr>
+            <tr><td>Dashboard gets 401 on every call</td><td>JWT secret / claims mismatch</td><td><a href="#rb-401" class="text-blue-400">401</a></td></tr>
+            <tr><td>Collector <span class="ic">/ready</span> stays 503</td><td>API keys not loaded from Kafka</td><td><a href="#rb-ready" class="text-blue-400">Collector not ready</a></td></tr>
+            <tr><td><span class="ic">make config-check</span> fails</td><td>Placeholder or missing secret</td><td><a href="#rb-config-check" class="text-blue-400">config-check</a></td></tr>
+            <tr><td>Events accepted (2xx) but no new rows</td><td>Processor not consuming</td><td><a href="#rb-not-stored" class="text-blue-400">Not stored</a></td></tr>
+            <tr><td><span class="ic">WARN kafka_lag_high</span> in logs</td><td>Processor behind</td><td><a href="#rb-not-stored" class="text-blue-400">Not stored</a></td></tr>
+            <tr><td>No geo data / one shared rate limit</td><td><span class="ic">TRUSTED_PROXIES</span> missing</td><td><a href="#rb-geo" class="text-blue-400">Geo</a></td></tr>
+          </table></div>
+        </div>
+      </details>
+
+      <details id="rb-dirty" class="proc">
+        <summary>Processor will not start: dirty migration</summary>
+        <div>
+          <p>Processor-Go refuses to start when <span class="ic">schema_migrations.dirty = true</span>. Version <i>N</i> dirty means migration <i>N</i> failed and was rolled back in full.</p>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Find and fix the cause: <span class="ic">make logs-processor</span> (on a v012 DB, usually <span class="ic">make db-baseline</span>)</li>
+            <li>Clear the flag (sets version <i>N-1</i>, not dirty, after confirmation):</li>
+          </ol>
+          <div class="cmd-block"><code>make db-force
+docker compose --env-file configs/single-host.env restart telemetry-processor
+make health</code></div>
+          <p class="text-amber-300/80">Never run <span class="ic">db-force</span> before fixing the cause: the migration fails again and re-sets the flag.</p>
+        </div>
+      </details>
+
+      <details id="rb-baseline" class="proc">
+        <summary>DB baseline not applied, or pre-flight fails</summary>
+        <div>
+          <ul class="list-disc list-inside space-y-1">
+            <li><b>Not applied:</b> <span class="ic">make db-baseline</span>, then <span class="ic">make deploy</span>.</li>
+            <li><b>Duplicates listed:</b> the baseline adds unique indexes on <span class="ic">rum_apps(package_name)</span> and <span class="ic">rum_users(user_id)</span>. Merge each duplicate (repoint child rows to one id, delete the rest) with the DB owner, then re-run.</li>
+            <li><b>Permission errors:</b> the <span class="ic">DATABASE_URL</span> role must own <span class="ic">public.rum_*</span> and <span class="ic">analytics.v_mobile_rum_rca_evidence</span>.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details id="rb-502" class="proc">
+        <summary>nginx returns 502</summary>
+        <div>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Is the upstream up? If not, fix the container, not nginx:</li>
+          </ol>
+          <div class="cmd-block"><code>curl -fsS http://127.0.0.1:8001/ready
+curl -fsS http://127.0.0.1:8002/health
+curl -fsS http://127.0.0.1:8003/api/v1/health</code></div>
+          <ol start="2" class="list-decimal list-inside space-y-1">
+            <li>Editing the live file? <span class="ic">sudo nginx -T | grep -n proxy_pass</span> (vhosts in <span class="ic">sites-enabled/</span> are often symlinks: <span class="ic">readlink -f</span>)</li>
+            <li>Ports match: <span class="ic">/collector-go/</span> → 8001/, <span class="ic">/processor-go/</span> → 8002/, <span class="ic">/api/</span> → 8003 (no trailing slash)</li>
+            <li>RHEL family: <span class="ic">sudo setsebool -P httpd_can_network_connect 1</span> (error log shows <span class="ic">Permission denied</span> on connect)</li>
+            <li><span class="ic">sudo nginx -t && sudo systemctl reload nginx</span>, wait a few seconds, retest</li>
+          </ol>
+          <p>During <span class="ic">make update</span> a 502 on <span class="ic">/collector-go/</span> is expected: the collector is stopped and SDKs queue offline.</p>
+        </div>
+      </details>
+
+      <details id="rb-401" class="proc">
+        <summary>Dashboard returns 401</summary>
+        <div>
+          <ol class="list-decimal list-inside space-y-1">
+            <li><span class="ic">EDGE_JWT_SECRET</span> must equal edge_platform's exactly (no trailing whitespace, no quotes)</li>
+            <li><span class="ic">EDGE_JWT_ISSUER</span> and <span class="ic">EDGE_JWT_AUDIENCE</span> must be <b>unset</b></li>
+            <li>Recreate the container (a restart does not reload env files):</li>
+          </ol>
+          <div class="cmd-block"><code>docker compose --env-file configs/single-host.env up -d telemetry-rum-analytics</code></div>
+        </div>
+      </details>
+
+      <details id="rb-ready" class="proc">
+        <summary>Collector /ready stays 503</summary>
+        <div>
+          <p>The collector holds API keys in memory, read from the compacted <span class="ic">rum-api-keys</span> topic that RUM Analytics produces. Until it has caught up, <span class="ic">/ready</span> and ingest answer 503 with <span class="ic">Retry-After: 5</span>.</p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>Analytics healthy? <span class="ic">make logs-rum-analytics</span> — it publishes keys on start</li>
+            <li>Topic exists? Kafka UI, or re-run <span class="ic">make kafka-init</span></li>
+            <li>Collector errors: <span class="ic">make logs-collector</span></li>
+          </ul>
+          <p>A revoked key gets 401 from the collector within ~10 s, no restart needed.</p>
+        </div>
+      </details>
+
+      <details id="rb-config-check" class="proc">
+        <summary>config-check failures</summary>
+        <div class="overflow-x-auto"><table class="tbl">
+          <tr><th>Message</th><th>Fix</th></tr>
+          <tr><td>Database config: contains placeholder values</td><td>Replace <span class="ic">USER:PASSWORD@DB_HOST</span> in <span class="ic">DATABASE_URL</span></td></tr>
+          <tr><td>Kafka UI password: missing</td><td>Set <span class="ic">SPRING_SECURITY_USER_PASSWORD</span> in <span class="ic">configs/kafka-ui.env</span></td></tr>
+          <tr><td>Redis password: unset or still CHANGE_ME</td><td>Set <span class="ic">REDIS_PASSWORD</span></td></tr>
+          <tr><td>Kafka disk budget: missing or not a byte count</td><td>Set <span class="ic">KAFKA_DISK_BUDGET_BYTES</span> (bytes, digits only)</td></tr>
+          <tr><td>JWT secret: missing</td><td>Set <span class="ic">EDGE_JWT_SECRET</span> (required when <span class="ic">EDGE_ENV=prod</span>)</td></tr>
+          <tr><td>JWT fallback: unsafe in prod</td><td><span class="ic">EDGE_ALLOW_JWT_FALLBACK=false</span></td></tr>
+          <tr><td>JWT secret: WARNING ... placeholder</td><td>Non-blocking. Rotate with edge_platform at the next window</td></tr>
+          <tr><td><span class="ic">PG_POOL_MAX_CONNS</span> below workers</td><td>Must be ≥ <span class="ic">PROCESSOR_WORKERS</span></td></tr>
+        </table></div>
+      </details>
+
+      <details id="rb-not-stored" class="proc">
+        <summary>Events accepted but not stored / lag alert</summary>
+        <div>
+          <ol class="list-decimal list-inside space-y-1">
+            <li><span class="ic">make logs-collector</span>: publishing without Kafka errors?</li>
+            <li><span class="ic">make logs-processor</span>: DB errors (missing columns = schema drift, connection refused)?</li>
+            <li><span class="ic">make kafka-lag</span>: per-partition lag of the processor group</li>
+            <li>Poisoned messages: <span class="ic">SELECT count(*) FROM processor_dead_letter_events;</span></li>
+          </ol>
+          <p><b>Lag alert.</b> <span class="ic">kafka-lag-watch</span> checks the lag every 5 min and logs <span class="ic">WARN kafka_lag_high lag=&lt;n&gt;</span> while it exceeds <span class="ic">LAG_ALERT_MESSAGES</span> (default 1,000,000 ≈ 48 min of backlog). No notifier: grep for it. <span class="ic">kafka_lag_check_failed</span> means the check itself failed (Kafka down); it recovers on its own.</p>
+          <div class="cmd-block"><code>docker compose --env-file configs/single-host.env logs kafka-lag-watch | grep kafka_lag_high</code></div>
+          <p>Keep <span class="ic">LAG_ALERT_MESSAGES</span> below <span class="ic">retention.bytes</span> ÷ average message size per partition, or data ages out before anyone is warned.</p>
+        </div>
+      </details>
+
+      <details id="rb-geo" class="proc">
+        <summary>No geo data, or one shared rate limit</summary>
+        <div>
+          <p>The collector sees nginx (the Docker bridge gateway) as the client. Confirm <span class="ic">TRUSTED_PROXIES=127.0.0.0/8,172.16.0.0/12,10.0.0.0/8</span> and that nginx sends <span class="ic">X-Forwarded-For</span>, then:</p>
+          <div class="cmd-block"><code>docker compose --env-file configs/single-host.env up -d telemetry-collector</code></div>
+        </div>
+      </details>
+
+      <details id="rb-access" class="proc">
+        <summary>Kafka UI and Redis CLI access</summary>
+        <div>
+          <p><b>Kafka UI</b> binds <span class="ic">127.0.0.1:8080</span> only. From your workstation:</p>
+          <div class="cmd-block"><code id="cmd-tunnel-rb"></code></div>
+          <p>Browse to <span class="ic">http://localhost:8080</span>, log in as <span class="ic">admin</span> with <span class="ic">SPRING_SECURITY_USER_PASSWORD</span> from <span class="ic">configs/kafka-ui.env</span>. Read-only.</p>
+          <p><b>Redis</b> is not published to the host:</p>
+          <div class="cmd-block"><code>docker compose --env-file configs/single-host.env exec telemetry-redis redis-cli   # auth via REDISCLI_AUTH</code></div>
+        </div>
+      </details>
+
+      <details id="rb-upgrade" class="proc">
+        <summary>Upgrade</summary>
+        <div>
+          <p>Images are pinned by digest, so an upgrade is always a new deployment package. Download the new zip, copy it to <span class="ic">/opt/edgetelemetry</span>, then:</p>
+          <div class="cmd-block"><code>cd /opt/edgetelemetry
+rm -rf edge_telemetry_deployment_go.prev
+mv edge_telemetry_deployment_go edge_telemetry_deployment_go.prev
+unzip -q edge_telemetry_deployment_go.zip
+cp -p edge_telemetry_deployment_go.prev/deployments/single-host/configs/*.env \
+      edge_telemetry_deployment_go/deployments/single-host/configs/
+cd edge_telemetry_deployment_go/deployments/single-host
+make config-check && make update</code></div>
+          <p><span class="ic">make update</span> is stop-the-world: ingest is down from step 2 to 6 (nginx 502, SDKs queue offline and retry).</p>
+          <ol class="list-decimal list-inside space-y-1">
+            <li><span class="ic">config-check</span>, pull the pinned images (before anything stops)</li>
+            <li>Stop the collector: no new messages reach Kafka</li>
+            <li>Drain: wait for the processor's lag to reach 0 (gives up after <span class="ic">DRAIN_TIMEOUT_SECONDS</span>, default 1800, leaving the collector <b>stopped</b>)</li>
+            <li>Stop processor and analytics; save offsets to <span class="ic">backups/offsets-&lt;ts&gt;-before.txt</span></li>
+            <li><span class="ic">kafka-init</span>: creates/grows topics, reapplies config (first upgrade grows <span class="ic">telemetry-upsert</span> 1 → 12 partitions)</li>
+            <li>Start analytics (migrations), processor (migrations), collector, each waiting for healthy; save <span class="ic">offsets-&lt;ts&gt;-after.txt</span></li>
+          </ol>
+          <p>Partition 0's committed offset in the <i>after</i> file must equal the <i>before</i> file. Running <span class="ic">make update</span> with nothing to upgrade is safe.</p>
+          <div class="note-warn"><span class="shrink-0">⚠</span><p>If the drain times out: fix the processor and run <span class="ic">make update</span> again, or give up with a rollback. Plain <span class="ic">make deploy</span> would start the new images without the drain ordering.</p></div>
+          <p>Analytics and processor migrations can take minutes on a large DB; the healthchecks allow up to 15 min.</p>
+        </div>
+      </details>
+
+      <details id="rb-rollback" class="proc">
+        <summary>Rollback</summary>
+        <div>
+          <p>Images only. Once <span class="ic">telemetry-upsert</span> has 12 partitions and new migrations have run, there is no topic or schema rollback.</p>
+          <div class="cmd-block"><code>cd /opt/edgetelemetry
+mv edge_telemetry_deployment_go edge_telemetry_deployment_go.bad
+mv edge_telemetry_deployment_go.prev edge_telemetry_deployment_go
+cd edge_telemetry_deployment_go/deployments/single-host
+make update</code></div>
+          <p>Rolling back the processor or analytics does not undo migrations they already applied. Confirm the older image works with the newer schema first.</p>
+        </div>
+      </details>
+
+      <details id="rb-acceptance" class="proc">
+        <summary>Acceptance run</summary>
+        <div>
+          <div class="note-danger"><span class="shrink-0">⛔</span><p>Writes Apps, API keys and telemetry into this install's DB and Kafka. <b>Never run it on a client install without the operator's consent.</b> Every script refuses unless <span class="ic">ACCEPTANCE_OK=yes</span>.</p></div>
+          <p>Needs <span class="ic">docker</span>, <span class="ic">curl</span>, <span class="ic">jq</span>, <span class="ic">openssl</span> on the host, the stack healthy, a <span class="ic">core.tenants</span> id and an active <span class="ic">core.users</span> id of that tenant.</p>
+          <div class="cmd-block"><code>export ACCEPTANCE_OK=yes ACCEPTANCE_TENANT_ID=&lt;tenant uuid&gt; ACCEPTANCE_USER_ID=&lt;user uuid&gt;
+make acceptance          # X1-X5 + XV, one PASS/FAIL line each, exit 1 on any FAIL
+make acceptance-clean    # RUN_ID=&lt;id&gt; for one run, RUN_ID=all for every run</code></div>
+          <div class="overflow-x-auto"><table class="tbl">
+            <tr><th>Check</th><th>Proves</th></tr>
+            <tr><td>X1</td><td>4.0 batch with an App-bound key: headers, session app/environment, <span class="ic">rum_app_versions</span> row</td></tr>
+            <tr><td>XV</td><td>Analytics <span class="ic">?version=</span> and per-version experience return X1's session</td></tr>
+            <tr><td>X2</td><td>Legacy batch + legacy key lands on the matching App; unmatched dead-letters and replays once the App exists</td></tr>
+            <tr><td>X3</td><td>Revoked key gets 401 within 10 s, no restart</td></tr>
+            <tr><td>X4</td><td>Re-consumed messages and double dead-letter replays add no rows</td></tr>
+            <tr><td>X5</td><td>One device's batches share a partition in order; newest event time wins</td></tr>
+            <tr><td>X6</td><td><span class="ic">make update</span> from a pre-effort install loses and duplicates nothing (<span class="ic">make acceptance-x6</span>, disposable host only)</td></tr>
+          </table></div>
+          <p>Output and <span class="ic">backups/acceptance-&lt;RUN_ID&gt;.log</span> mask keys and the JWT.</p>
+        </div>
+      </details>
+
+      <details id="rb-rotation" class="proc">
+        <summary>Secret rotation</summary>
+        <div class="overflow-x-auto"><table class="tbl">
+          <tr><th>Secret</th><th>Where</th><th>After changing</th></tr>
+          <tr><td><span class="ic">REDIS_PASSWORD</span></td><td><span class="ic">configs/single-host.env</span></td><td><span class="ic">make down && make deploy</span></td></tr>
+          <tr><td><span class="ic">EDGE_JWT_SECRET</span></td><td><span class="ic">configs/single-host.env</span> <b>and</b> edge_platform, together</td><td><span class="ic">up -d telemetry-rum-analytics</span></td></tr>
+          <tr><td>DB password</td><td>DB server and <span class="ic">DATABASE_URL</span></td><td><span class="ic">up -d</span> collector, processor, rum-analytics</td></tr>
+          <tr><td>Kafka UI password</td><td><span class="ic">configs/kafka-ui.env</span></td><td><span class="ic">up -d kafka-ui</span></td></tr>
+        </table>
+        <p class="hint mt-2"><span class="ic">up -d &lt;svc&gt;</span> = <span class="ic">docker compose --env-file configs/single-host.env up -d &lt;svc&gt;</span>. <span class="ic">make restart</span> does <b>not</b> reload env files.</p></div>
+      </details>
+
+      <details id="rb-commands" class="proc">
+        <summary>Command reference</summary>
+        <div class="overflow-x-auto"><table class="tbl">
+          <tr><th>Command</th><th>Purpose</th></tr>
+          <tr><td><span class="ic">make deploy</span></td><td>Validate, check baseline, start, health check</td></tr>
+          <tr><td><span class="ic">make update</span></td><td>Stop-the-world upgrade with drain (see Upgrade)</td></tr>
+          <tr><td><span class="ic">make status</span> / <span class="ic">health</span> / <span class="ic">health-detailed</span></td><td>State and health</td></tr>
+          <tr><td><span class="ic">make monitor</span></td><td>Live health and resource view</td></tr>
+          <tr><td><span class="ic">make logs</span> / <span class="ic">logs-&lt;svc&gt;</span></td><td>Tail logs (collector, processor, rum-analytics, redis, kafka)</td></tr>
+          <tr><td><span class="ic">make config-check</span></td><td>Validate env files</td></tr>
+          <tr><td><span class="ic">make db-baseline</span></td><td>One-time: upgrade a v012 <span class="ic">edge_db</span> to the Go schema</td></tr>
+          <tr><td><span class="ic">make db-force</span></td><td>Clear a dirty processor migration (after fixing the cause)</td></tr>
+          <tr><td><span class="ic">make kafka-lag</span></td><td>Processor consumer-group lag per partition</td></tr>
+          <tr><td><span class="ic">make kafka-init</span></td><td>Re-run topic setup; reverts hand-made topic config drift</td></tr>
+          <tr><td><span class="ic">make restart</span></td><td>Restart all containers (does not reload env files)</td></tr>
+          <tr><td><span class="ic">make down</span></td><td>Stop the stack, volumes kept</td></tr>
+          <tr><td><span class="ic">make acceptance</span> / <span class="ic">-x6</span> / <span class="ic">-clean</span></td><td>Acceptance run and its cleanup (consent required)</td></tr>
+          <tr><td class="text-red-400"><span class="ic">make clean</span></td><td class="text-red-300">Deletes volumes. Never on a live install</td></tr>
+        </table></div>
+      </details>
+
+      <details id="rb-security" class="proc">
+        <summary>Security model</summary>
+        <div>
+          <ul class="list-disc list-inside space-y-1">
+            <li><b>Network:</b> every host port binds <span class="ic">127.0.0.1</span>; public traffic enters only through nginx. Firewall opens 80/443 only.</li>
+            <li><b>Containers:</b> all <span class="ic">read_only</span> with <span class="ic">no-new-privileges</span>; first-party images run as <span class="ic">65534:65534</span>.</li>
+            <li><b>Images:</b> first-party pinned by digest, third-party by exact tag.</li>
+            <li><b>Redis:</b> <span class="ic">requirepass</span> mandatory; compose aborts without it.</li>
+            <li><b>Kafka UI:</b> kafbat, read-only, login form, loopback only, SSH tunnel. Never proxy it publicly.</li>
+            <li><b>Secrets:</b> env files are <span class="ic">chmod 600</span> and never committed or emailed.</li>
+          </ul>
+        </div>
+      </details>
     </section>
 
   </main>
 
-  <script>
-    const state = { current: 0, completed: new Set(), total: 10 };
+  <template id="tpl-cmd">
+    <div class="flex items-center justify-between px-4 py-2 bg-slate-900/60 border-b border-white/5">
+      <span class="cmd-label text-xs text-slate-500 font-mono"></span>
+      <button class="copy-btn text-xs text-slate-400 hover:text-green-400 transition-colors flex items-center gap-1.5" aria-label="Copy to clipboard">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+        Copy
+      </button>
+    </div>
+    <pre class="bg-slate-950 px-5 py-4 text-sm text-cyan-200 font-mono overflow-x-auto leading-relaxed"></pre>
+  </template>
 
+  <script>
+    const $ = id => document.getElementById(id);
+    const val = (id, fallback) => $(id).value.trim() || fallback;
+    const steps = [...document.querySelectorAll('.step')];
+    const state = { current: 0, completed: new Set() };
+
+    // ---- layout: number steps, add footer + trouble toggle, wrap code blocks ----
+    function initSteps() {
+      steps.forEach((s, i) => {
+        const head = s.querySelector('.step-head');
+        const [h2, p] = head.children;
+        head.className = 'flex items-start gap-4 mb-6';
+        head.innerHTML = `<div class="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-sm font-bold text-white shrink-0">${i + 1}</div>
+          <div class="flex-1 min-w-0"><h2 class="text-base font-semibold text-slate-100">${h2.innerHTML}</h2><p class="text-sm text-slate-400 mt-0.5">${p.innerHTML}</p></div>`;
+
+        const trouble = s.querySelector('.trouble-panel');
+        const footer = document.createElement('div');
+        footer.className = 'mt-8 flex items-center justify-between flex-wrap gap-4';
+        footer.innerHTML = `<button class="text-xs text-slate-500 hover:text-amber-400 transition-colors" aria-label="Show troubleshooting">⚠ Having trouble?</button>
+          <button class="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-6 py-2.5 rounded-lg shadow-lg shadow-green-500/20 transition-all duration-200 hover:-translate-y-0.5" aria-label="Mark step complete">${i === steps.length - 1 ? 'Finish ✓' : 'Mark Complete →'}</button>`;
+        s.insertBefore(footer, trouble);
+        trouble.className = 'hidden mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-sm text-amber-200 space-y-2';
+        trouble.innerHTML = `<p class="font-semibold">Common issues:</p><ul class="list-disc list-inside space-y-1 text-amber-300/80">${trouble.innerHTML}</ul>`;
+        footer.children[0].onclick = () => trouble.classList.toggle('hidden');
+        footer.children[1].onclick = () => completeStep(i);
+
+        if (i === 0) s.classList.add('ring-green-500/30', 'border-l-4', 'border-green-500');
+        else s.classList.add('opacity-40', 'pointer-events-none');
+      });
+      $('prog-total').textContent = steps.length;
+    }
+
+    function initCodeBlocks() {
+      const tpl = $('tpl-cmd');
+      document.querySelectorAll('.cmd-block').forEach(b => {
+        const code = b.querySelector('code');
+        b.className = 'cmd-block rounded-xl overflow-hidden border border-white/5';
+        b.replaceChildren(tpl.content.cloneNode(true));
+        b.querySelector('.cmd-label').textContent = b.dataset.label || 'bash';
+        b.querySelector('pre').appendChild(code);
+        const btn = b.querySelector('.copy-btn');
+        btn.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(code.textContent);
+          const original = btn.innerHTML;
+          btn.innerHTML = '✓ Copied!';
+          btn.classList.add('text-green-400');
+          setTimeout(() => { btn.innerHTML = original; btn.classList.remove('text-green-400'); }, 2000);
+        });
+      });
+    }
+
+    // ---- progress ----
     function completeStep(i) {
       state.completed.add(i);
       state.current = i + 1;
       updateProgress();
-      
-      const currentStep = document.querySelector(`[data-step="${i}"]`);
-      if (currentStep) {
-        currentStep.classList.remove('ring-green-500/30', 'border-l-4', 'border-green-500');
-      }
-      
-      const next = document.querySelector(`[data-step="${i + 1}"]`);
-      if (next) {
-        next.classList.remove('opacity-40', 'pointer-events-none');
-        next.classList.add('ring-green-500/30', 'border-l-4', 'border-green-500');
-        setTimeout(() => {
-          next.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 100);
-      }
+      steps[i].classList.remove('ring-green-500/30', 'border-l-4', 'border-green-500');
+      const next = steps[i + 1] || $('done');
+      next.classList.remove('opacity-40', 'pointer-events-none', 'hidden');
+      if (steps[i + 1]) next.classList.add('ring-green-500/30', 'border-l-4', 'border-green-500');
+      setTimeout(() => next.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
     }
 
     function updateProgress() {
-      const pct = (state.completed.size / state.total) * 100;
-      document.getElementById('prog-fill').style.width = pct + '%';
-      document.getElementById('prog-current').textContent = Math.min(state.current + 1, state.total);
-      
-      const labels = ['Prerequisites', 'Configure', 'Server Setup', 'Download', 'Access', 'Transfer', 'Deploy', 'Verify', 'Nginx/SSL', 'Complete'];
-      document.getElementById('prog-label').textContent = labels[state.current] || 'Complete';
+      $('prog-fill').style.width = (state.completed.size / steps.length) * 100 + '%';
+      $('prog-current').textContent = Math.min(state.current + 1, steps.length);
+      $('prog-label').textContent = steps[state.current]?.dataset.label || 'Complete';
     }
 
-    function updateServerAccessCommands() {
-      const username = document.getElementById('server-username')?.value.trim() || 'user';
-      const serverIp = document.getElementById('server-ip')?.value.trim() || '127.0.0.1';
-      const target = `${username}@${serverIp}`;
-      const scpCommand = document.getElementById('transfer-scp-command');
-      const sshCommand = document.getElementById('transfer-ssh-command');
-      const sslScpCommand = document.getElementById('ssl-scp-command');
-      const collectorEndpoint = document.getElementById('endpoint-collector');
-      const processorEndpoint = document.getElementById('endpoint-processor');
-      const dashboardEndpoint = document.getElementById('endpoint-dashboard');
-      const kafkaUiEndpoint = document.getElementById('endpoint-kafka-ui');
-      const resourceKafkaUiEndpoint = document.getElementById('resource-kafka-ui-endpoint');
-
-      if (scpCommand) {
-        scpCommand.textContent = `scp -r EdgeTelemetryDeployment/ ${target}:~/`;
-      }
-
-      if (sshCommand) {
-        sshCommand.textContent = `ssh ${target}`;
-      }
-
-      if (sslScpCommand) {
-        sslScpCommand.textContent = `scp fullchain.pem privkey.pem ${target}:/tmp/`;
-      }
-
-      if (collectorEndpoint) {
-        collectorEndpoint.textContent = `http://${serverIp}:8001`;
-      }
-
-      if (processorEndpoint) {
-        processorEndpoint.textContent = `http://${serverIp}:8002`;
-      }
-
-      if (dashboardEndpoint) {
-        dashboardEndpoint.textContent = `http://${serverIp}:8003`;
-      }
-
-      if (kafkaUiEndpoint) {
-        kafkaUiEndpoint.textContent = `http://${serverIp}:8080`;
-      }
-
-      if (resourceKafkaUiEndpoint) {
-        resourceKafkaUiEndpoint.textContent = `http://${serverIp}:8080`;
-      }
+    // ---- generated content ----
+    function randomSecret() {
+      const bytes = crypto.getRandomValues(new Uint8Array(24));
+      return btoa(String.fromCharCode(...bytes)); // same shape as `openssl rand -base64 24`
     }
 
-    function updateFullEnvPreview() {
-      const dbUser = document.getElementById('db-user').value || 'db-user';
-      const dbPassword = document.getElementById('db-password').value || 'db-password';
-      const dbHost = document.getElementById('db-host').value || '127.0.0.1';
-      const dbPort = document.getElementById('db-port').value || '5433';
-      const dbName = document.getElementById('db-name').value || 'edge_db';
-      const jwtSecret = document.getElementById('jwt-secret').value || 'dev-only-secret-change-in-prod';
-      const jwtIssuer = document.getElementById('jwt-issuer').value || 'edge-control-plane';
-      const jwtAudience = document.getElementById('jwt-audience').value || 'edge-dashboard';
-      
-      const databaseUrl = `postgresql+asyncpg://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-      
-      const envPreview = `# ===== Shared App Settings (Processor + RUM Analytics) =====
+    function buildEnv() {
+      const user = encodeURIComponent(val('db-user', 'USER'));
+      const pass = encodeURIComponent(val('db-password', 'PASSWORD'));
+      const origins = val('origins', 'capacitor://localhost,https://localhost,http://localhost');
+      const budgetBytes = Math.round(Number(val('kafka-budget', '120')) * 1e9);
+      return `# Collector-Go, Processor-Go and RUM Analytics Go. Generated by the deployment guide.
+
+# ===== Shared App Settings =====
 ENVIRONMENT=production
 LOG_LEVEL=INFO
 CACHE_EXPIRE_SECONDS=300
 
-# ===== Database (shared) =====
-DATABASE_URL=${databaseUrl}
+# ===== Database (external; host must resolve from inside Docker) =====
+DATABASE_URL=postgresql://${user}:${pass}@${val('db-host', 'DB_HOST')}:${val('db-port', '5432')}/${val('db-name', 'edge_db')}
+DATABASE_SSL_MODE=${$('db-sslmode').value}
+RUN_MIGRATIONS=true
 
-# ===== Kafka (shared) =====
+# ===== Kafka =====
 KAFKA_BOOTSTRAP_SERVERS=kafka:29092
 KAFKA_TOPIC=telemetry-upsert
+KAFKA_API_KEYS_TOPIC=rum-api-keys
+KAFKA_DISK_BUDGET_BYTES=${budgetBytes}
+LAG_ALERT_MESSAGES=1000000
 
-# ===== Redis (shared) =====
+# ===== Redis =====
 REDIS_HOST=telemetry-redis
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=${val('redis-password', 'CHANGE_ME')}
 REDIS_DB=0
 
-# ===== API defaults (can be overridden per service) =====
+# ===== API =====
 API_HOST=0.0.0.0
+AUTH_MODE=api_key
 
-# ===== AUTH =====
-EDGE_JWT_ALG=HS256
-EDGE_JWT_SECRET=${jwtSecret}
-EDGE_JWT_ISSUER=${jwtIssuer}
-EDGE_JWT_AUDIENCE=${jwtAudience}
-EDGE_JWT_ACCESS_MINUTES=120
-EDGE_ALLOW_JWT_FALLBACK=true`;
-      
-      document.getElementById('full-env-preview').innerHTML = `<code>${envPreview}</code>`;
+# ===== JWT (RUM Analytics Go) — never set EDGE_JWT_ISSUER / EDGE_JWT_AUDIENCE =====
+EDGE_ENV=prod
+EDGE_JWT_SECRET=${val('jwt-secret', '__CHANGE_ME_TO_EDGE_PLATFORM_SECRET__')}
+EDGE_ALLOW_JWT_FALLBACK=false
+
+# ===== CORS (collector reads CORS_ALLOWED_ORIGINS, analytics reads ALLOWED_ORIGINS) =====
+CORS_ALLOWED_ORIGINS=${origins}
+ALLOWED_ORIGINS=${origins}
+
+# nginx proxies from the Docker bridge; without this: no geo, one shared rate-limit bucket
+TRUSTED_PROXIES=127.0.0.0/8,172.16.0.0/12,10.0.0.0/8
+
+# ===== Collector rate limits =====
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_PER_IP_PER_MIN=600
+RATE_LIMIT_PER_INSTALL_PER_MIN=60000
+
+# ===== Processor parallelism (workers max 12; pool >= workers) =====
+PROCESSOR_WORKERS=4
+PG_POOL_MAX_CONNS=8`;
     }
 
-    function copyFullEnvFile() {
-      const dbUser = document.getElementById('db-user').value || 'db-user';
-      const dbPassword = document.getElementById('db-password').value || 'db-password';
-      const dbHost = document.getElementById('db-host').value || '127.0.0.1';
-      const dbPort = document.getElementById('db-port').value || '5433';
-      const dbName = document.getElementById('db-name').value || 'edge_db';
-      const jwtSecret = document.getElementById('jwt-secret').value || 'dev-only-secret-change-in-prod';
-      const jwtIssuer = document.getElementById('jwt-issuer').value || 'edge-control-plane';
-      const jwtAudience = document.getElementById('jwt-audience').value || 'edge-dashboard';
-      
-      const databaseUrl = `postgresql+asyncpg://${dbUser}:${dbPassword}@${dbHost}:${dbPort}/${dbName}`;
-      
-      const envContent = `# ===== Shared App Settings (Processor + RUM Analytics) =====
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-CACHE_EXPIRE_SECONDS=300
-
-# ===== Database (shared) =====
-DATABASE_URL=${databaseUrl}
-
-# ===== Kafka (shared) =====
-KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-KAFKA_TOPIC=telemetry-upsert
-
-# ===== Redis (shared) =====
-REDIS_HOST=telemetry-redis
-REDIS_PORT=6379
-REDIS_PASSWORD=
-REDIS_DB=0
-
-# ===== API defaults (can be overridden per service) =====
-API_HOST=0.0.0.0
-
-# ===== AUTH =====
-EDGE_JWT_ALG=HS256
-EDGE_JWT_SECRET=${jwtSecret}
-EDGE_JWT_ISSUER=${jwtIssuer}
-EDGE_JWT_AUDIENCE=${jwtAudience}
-EDGE_JWT_ACCESS_MINUTES=120
-EDGE_ALLOW_JWT_FALLBACK=true`;
-      
-      navigator.clipboard.writeText(envContent);
+    function buildNginx(domain) {
+      const proxy = (path, upstream, extra = '') => `
+    location ^~ ${path} {
+        proxy_pass ${upstream};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;${extra}
     }
-
-    function initCopyButtons() {
-      document.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const code = btn.closest('.cmd-block').querySelector('code').innerText;
-          await navigator.clipboard.writeText(code);
-          const originalHTML = btn.innerHTML;
-          btn.innerHTML = '✓ Copied!';
-          btn.classList.add('text-green-400');
-          setTimeout(() => {
-            btn.innerHTML = originalHTML;
-            btn.classList.remove('text-green-400');
-          }, 2000);
-        });
-      });
-    }
-
-    function initTroubleToggles() {
-      document.querySelectorAll('.trouble-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const panel = btn.closest('section').querySelector('.trouble-panel');
-          panel.classList.toggle('hidden');
-        });
-      });
-    }
-
-    async function fetchReleases() {
-      const pat = document.getElementById('github-pat').value.trim();
-      const btn = document.getElementById('fetch-releases-btn');
-      const releasesList = document.getElementById('releases-list');
-      const status = document.getElementById('download-status');
-      
-      if (!pat) {
-        status.className = 'flex gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300 mt-4';
-        status.innerHTML = '<span class="shrink-0">✗</span><p>Please enter your GitHub Personal Access Token.</p>';
-        status.classList.remove('hidden');
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Fetching...';
-
-      try {
-        const response = await fetch('https://api.github.com/repos/NCG-Africa/EdgeTelemetryDeployment/releases', {
-          headers: {
-            'Authorization': `token ${pat}`,
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(response.status === 401 ? 'Invalid token or insufficient permissions' : 
-                         response.status === 404 ? 'Repository not found or no access' :
-                         `HTTP ${response.status}`);
-        }
-
-        const releases = await response.json();
-        
-        if (releases.length === 0) {
-          status.className = 'flex gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-sm text-amber-300 mt-4';
-          status.innerHTML = '<span class="shrink-0">⚠</span><p>No releases found. Please contact your administrator to create a release in the repository.</p>';
-          status.classList.remove('hidden');
-          releasesList.classList.add('hidden');
-        } else {
-          releasesList.innerHTML = releases.slice(0, 5).map(release => {
-            const asset = release.assets.find(a => a.name.endsWith('.zip')) || release.assets[0];
-            return `
-              <div class="rounded-xl bg-slate-700/50 border border-white/5 p-4">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex-1 min-w-0">
-                    <h4 class="text-sm font-semibold text-slate-100">${release.name || release.tag_name}</h4>
-                    <p class="text-xs text-slate-400 mt-1">${new Date(release.published_at).toLocaleDateString()}</p>
-                    ${asset ? `<p class="text-xs text-slate-500 mt-1">${asset.name} (${(asset.size / 1024 / 1024).toFixed(2)} MB)</p>` : ''}
-                  </div>
-                  ${asset ? `
-                    <button onclick="downloadReleaseAsset('${asset.url}', '${asset.name}')" class="shrink-0 inline-flex items-center gap-2 bg-green-500 hover:bg-green-400 text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all duration-200 hover:-translate-y-0.5">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                      </svg>
-                      Download
-                    </button>
-                  ` : '<span class="text-xs text-slate-500">No assets</span>'}
-                </div>
-              </div>
-            `;
-          }).join('');
-          releasesList.classList.remove('hidden');
-          status.classList.add('hidden');
-        }
-      } catch (error) {
-        status.className = 'flex gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300 mt-4';
-        status.innerHTML = `<span class="shrink-0">✗</span><p>Error: ${error.message}</p>`;
-        status.classList.remove('hidden');
-        releasesList.classList.add('hidden');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Fetch Available Releases';
-      }
-    }
-
-    function downloadReleaseAsset(assetUrl, assetName) {
-      const pat = document.getElementById('github-pat').value.trim();
-      const status = document.getElementById('download-status');
-      
-      status.className = 'flex gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-sm text-blue-300 mt-4';
-      status.innerHTML = '<span class="shrink-0">⏳</span><p>Downloading... This may take a moment.</p>';
-      status.classList.remove('hidden');
-
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', assetUrl, true);
-      xhr.setRequestHeader('Authorization', `token ${pat}`);
-      xhr.setRequestHeader('Accept', 'application/octet-stream');
-      xhr.responseType = 'blob';
-
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          const blob = xhr.response;
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = assetName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-
-          status.className = 'flex gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-sm text-green-300 mt-4';
-          status.innerHTML = '<span class="shrink-0">✓</span><p>Download complete! Check your downloads folder.</p>';
-          status.classList.remove('hidden');
-        } else {
-          status.className = 'flex gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300 mt-4';
-          status.innerHTML = `<span class="shrink-0">✗</span><p>Download failed: HTTP ${xhr.status}. Check your token permissions.</p>`;
-          status.classList.remove('hidden');
-        }
-      };
-
-      xhr.onerror = function() {
-        status.className = 'flex gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-sm text-red-300 mt-4';
-        status.innerHTML = '<span class="shrink-0">✗</span><p>Network error. Unable to download the file.</p>';
-        status.classList.remove('hidden');
-      };
-
-      xhr.send();
-    }
-
-    function updateEnvPreview() {
-      const serverIp = document.getElementById('env-server-ip').value || '<your-server-ip>';
-      const kafka = document.getElementById('env-kafka').value || 'localhost:9092';
-      const redis = document.getElementById('env-redis').value || 'localhost';
-      
-      document.getElementById('env-preview').innerHTML = `<code>SERVER_IP=${serverIp}
-KAFKA_BROKER=${kafka}
-REDIS_HOST=${redis}
-REDIS_PORT=6379</code>`;
-    }
-
-    function copyEnvFile() {
-      const serverIp = document.getElementById('env-server-ip').value || '<your-server-ip>';
-      const kafka = document.getElementById('env-kafka').value || 'localhost:9092';
-      const redis = document.getElementById('env-redis').value || 'localhost';
-      
-      const envContent = `SERVER_IP=${serverIp}
-KAFKA_BROKER=${kafka}
-REDIS_HOST=${redis}
-REDIS_PORT=6379`;
-      
-      navigator.clipboard.writeText(envContent);
-    }
-
-    function updateNginxConfig() {
-      const domainInput = document.getElementById('nginx-domain')?.value.trim() || '';
-      const serverIp = document.getElementById('server-ip')?.value.trim() || '127.0.0.1';
-      const domain = domainInput || serverIp;
-      const configElement = document.getElementById('nginx-config');
-      const domainNoteElement = document.getElementById('nginx-domain-note');
-      const sslInstallCommandElement = document.getElementById('ssl-install-command');
-      const sslCertPathElement = document.getElementById('ssl-cert-path');
-      const sslApiEndpointElement = document.getElementById('ssl-api-endpoint');
-      const sslCollectorEndpointElement = document.getElementById('ssl-collector-endpoint');
-      
-      const config = `server {
+`;
+      return `server {
     listen 80;
     listen [::]:80;
     server_name ${domain};
@@ -1452,137 +828,68 @@ server {
     listen [::]:443 ssl http2;
     server_name ${domain};
 
-    ssl_certificate /etc/nginx/ssl/${domain}/fullchain.pem;
+    ssl_certificate     /etc/nginx/ssl/${domain}/fullchain.pem;
     ssl_certificate_key /etc/nginx/ssl/${domain}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-
-    location ^~ /collector/ {
-        proxy_pass http://127.0.0.1:8001/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    location ^~ /api/ {
-        proxy_pass http://127.0.0.1:8003;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300;
-    }
-
+${proxy('/collector-go/', 'http://127.0.0.1:8001/')}${proxy('/processor-go/', 'http://127.0.0.1:8002/')}${proxy('/api/', 'http://127.0.0.1:8003', '\n        proxy_read_timeout 300;')}
     location / {
         return 404;
     }
 }`;
-      
-      configElement.innerHTML = `<code>${config}</code>`;
-
-      if (domainNoteElement) {
-        if (domainInput) {
-          domainNoteElement.textContent = 'Using client-provided domain. Ensure it matches the certificate CN/SAN.';
-          domainNoteElement.classList.remove('text-amber-300');
-          domainNoteElement.classList.add('text-slate-500');
-        } else {
-          domainNoteElement.textContent = 'No domain provided. Enter Server IP in Step 5 (Server Access Details).';
-          domainNoteElement.classList.remove('text-slate-500');
-          domainNoteElement.classList.add('text-amber-300');
-        }
-      }
-
-      if (sslInstallCommandElement) {
-        sslInstallCommandElement.textContent = `sudo mkdir -p /etc/nginx/ssl/${domain}
-sudo mv /tmp/fullchain.pem /etc/nginx/ssl/${domain}/fullchain.pem
-sudo mv /tmp/privkey.pem /etc/nginx/ssl/${domain}/privkey.pem
-sudo chown root:root /etc/nginx/ssl/${domain}/*
-sudo chmod 644 /etc/nginx/ssl/${domain}/fullchain.pem
-sudo chmod 600 /etc/nginx/ssl/${domain}/privkey.pem`;
-      }
-
-      if (sslCertPathElement) {
-        sslCertPathElement.textContent = `/etc/nginx/ssl/${domain}/`;
-      }
-
-      if (sslApiEndpointElement) {
-        sslApiEndpointElement.textContent = `https://${domain}/api/v1/...`;
-      }
-
-      if (sslCollectorEndpointElement) {
-        sslCollectorEndpointElement.textContent = `https://${domain}/collector/...`;
-      }
     }
 
-    function copyNginxConfig() {
-      const domainInput = document.getElementById('nginx-domain')?.value.trim() || '';
-      const serverIp = document.getElementById('server-ip')?.value.trim() || '127.0.0.1';
-      const domain = domainInput || serverIp;
-      const config = `server {
-    listen 80;
-    listen [::]:80;
-    server_name ${domain};
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${domain};
-
-    ssl_certificate /etc/nginx/ssl/${domain}/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/${domain}/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location ^~ /collector/ {
-        proxy_pass http://127.0.0.1:8001/;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    function updateConfig() {
+      $('env-single-host').textContent = buildEnv();
+      $('env-kafka-ui').textContent = `SPRING_SECURITY_USER_PASSWORD=${val('kafka-ui-password', '')}`;
     }
 
-    location ^~ /api/ {
-        proxy_pass http://127.0.0.1:8003;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 300;
-    }
+    function updateServer() {
+      const user = val('server-username', 'user');
+      const ip = val('server-ip', '<server-ip>');
+      const port = val('server-port', '22');
+      const domainInput = val('nginx-domain', '');
+      const domain = domainInput || ip;
+      const sshPort = port === '22' ? '' : ` -p ${port}`;
+      const scpPort = port === '22' ? '' : ` -P ${port}`;
+      const dir = `/etc/nginx/ssl/${domain}`;
+      const tunnel = `ssh${sshPort} -L 8080:localhost:8080 ${user}@${ip}`;
 
-    location / {
-        return 404;
-    }
-}`;
-      
-      navigator.clipboard.writeText(config);
-    }
+      $('cmd-scp').textContent = `scp${scpPort} edge_telemetry_deployment_go.zip ${user}@${ip}:/opt/edgetelemetry/
+ssh${sshPort} ${user}@${ip}`;
+      $('cmd-unpack').textContent = `cd /opt/edgetelemetry
+unzip -q edge_telemetry_deployment_go.zip
+cd edge_telemetry_deployment_go/deployments/single-host`;
+      $('cmd-ssl-scp').textContent = `scp${scpPort} fullchain.pem privkey.pem ${user}@${ip}:/tmp/`;
+      $('cmd-ssl-install').textContent = `sudo mkdir -p ${dir}
+sudo mv /tmp/fullchain.pem /tmp/privkey.pem ${dir}/
+sudo chown root:root ${dir}/*
+sudo chmod 644 ${dir}/fullchain.pem
+sudo chmod 600 ${dir}/privkey.pem`;
+      $('nginx-config').textContent = buildNginx(domain);
+      $('cmd-verify-public').textContent = `curl -fsS https://${domain}/collector-go/ready
+curl -fsS https://${domain}/processor-go/health
+curl -fsS https://${domain}/api/v1/health`;
+      $('cmd-tunnel').textContent = tunnel;
+      $('cmd-tunnel-rb').textContent = tunnel;
 
-    document.getElementById('db-user')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('db-password')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('db-host')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('db-port')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('db-name')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('jwt-secret')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('jwt-issuer')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('jwt-audience')?.addEventListener('input', updateFullEnvPreview);
-    document.getElementById('server-username')?.addEventListener('input', updateServerAccessCommands);
-    document.getElementById('server-ip')?.addEventListener('input', updateServerAccessCommands);
-    document.getElementById('server-ip')?.addEventListener('input', updateNginxConfig);
-    document.getElementById('nginx-domain')?.addEventListener('input', updateNginxConfig);
+      const note = $('nginx-domain-note');
+      note.textContent = domainInput
+        ? 'Must match the certificate CN/SAN.'
+        : 'No domain entered: falling back to the server IP from step 5.';
+      note.classList.toggle('text-amber-300', !domainInput);
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
-      initCopyButtons();
-      initTroubleToggles();
+      initSteps();
+      initCodeBlocks();
+      $('redis-password').value = randomSecret();
+      $('kafka-ui-password').value = randomSecret();
+      document.querySelectorAll('[data-regen]').forEach(b => b.onclick = () => { $(b.dataset.regen).value = randomSecret(); updateConfig(); });
+      document.querySelectorAll('.cfg').forEach(el => el.addEventListener('input', updateConfig));
+      document.querySelectorAll('.srv').forEach(el => el.addEventListener('input', updateServer));
+      updateConfig();
+      updateServer();
       updateProgress();
-      updateFullEnvPreview();
-      updateServerAccessCommands();
-      updateNginxConfig();
     });
   </script>
 </body>

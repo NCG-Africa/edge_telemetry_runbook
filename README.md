@@ -1,66 +1,44 @@
-# EdgeTelemetry Interactive Deployment Guide
+# EdgeTelemetry Deployment Guide & Runbook
 
-A single-file interactive HTML guide for deploying EdgeTelemetry on Linux (Ubuntu/Debian, RHEL/Rocky/Alma/CentOS/Fedora, SLES/openSUSE). Built with Material You Dark design system, progressive step unlocking, and GitHub integration.
+Single-file interactive guide (`index.html`) for deploying the **Go** EdgeTelemetry
+stack (single-host) on Linux, plus the on-call runbook: upgrade, rollback,
+troubleshooting, acceptance run, secret rotation and command reference.
 
-## Features
+Source of truth for every command is the deployment repo
+[`NCG-Africa/edge_telemetry_deployment_go`](https://github.com/NCG-Africa/edge_telemetry_deployment_go)
+(README §2–§6). When that repo changes, update this page and rebuild the package.
 
-- 🎯 **Progressive Step Unlocking** — Steps unlock sequentially to prevent skipping prerequisites
-- 📦 **GitHub Integration** — Direct ZIP download from `NCG-Africa/EdgeTelemetryDeployment` master branch
-- ⚙️ **Interactive .env Builder** — Form-based configuration with live preview
-- 📋 **One-Click Copy** — All commands copyable with visual feedback
-- 🎨 **Material You Dark** — Professional dark theme with green accents
-- 🚀 **Zero Dependencies** — Pure client-side HTML/CSS/JavaScript, no backend required
-- 📱 **Mobile Responsive** — Works on screens as small as 375px
+## What it covers
 
-## Quick Start
+1. Prerequisites (incl. stopping the Python stack)
+2. Config builder: generates `configs/single-host.env` and `configs/kafka-ui.env` in the browser
+3. Server prep with `getstarted.sh` (Debian, RHEL, SUSE families)
+4. Download package (`downloads/edge_telemetry_deployment_go.zip`)
+5. Transfer to `/opt/edgetelemetry`
+6. Write config + `make config-check`
+7. `make db-baseline`
+8. `make deploy`
+9. nginx + TLS (`/collector-go/`, `/processor-go/`, `/api/`)
+10. Verify
 
-### Local Development
+The runbook section below the steps is always unlocked.
+
+## Local preview
+
 ```bash
-cd /Users/mktowett/Development/Windsurf/edge-telemetry-deployment-webpage
-python3 -m http.server 8000
+python3 -m http.server 8000   # http://localhost:8000
 ```
 
-Open: **http://localhost:8000**
+Deployed as static assets on Cloudflare Workers (`wrangler.jsonc`).
 
-### Production Deployment
-Copy `index.html` to your web server and serve as a static file. Works with any static hosting (Nginx, Apache, Netlify, Vercel, etc.).
+## Rebuild the deployment package
 
-## User Guide
+From the deployment repo, tracked files only (never real env files or keys):
 
-### GitHub Personal Access Token
-Users need a GitHub PAT with `repo` scope to download the deployment package:
+```bash
+cd /path/to/edge_telemetry_deployment_go
+git archive --format=zip --prefix=edge_telemetry_deployment_go/ \
+  -o /path/to/runbook/downloads/edge_telemetry_deployment_go.zip HEAD
+```
 
-1. Visit: https://github.com/settings/tokens/new
-2. Select scope: `repo` (full repository access)
-3. Generate token
-4. Paste into the guide's Step 2
-
-**Note:** The token is never stored or transmitted anywhere except directly to GitHub's API.
-
-## System Requirements
-
-- Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
-- JavaScript enabled
-- Clipboard API support (for copy buttons)
-
-## Architecture
-
-The guide walks users through deploying:
-- **Telemetry Collector** (Port 8001) - Data ingestion API
-- **Telemetry Processor** (Port 8002) - Data processing service
-- **Dashboard API** (Port 8003) - Query API with Redis caching
-- **EdgeRum Portal** (Port 8004) - Web dashboard frontend
-- **Kafka** (Internal) - Message broker
-- **Redis** (Port 6379) - Caching layer
-- **Kafka UI** (Port 8080) - Monitoring interface
-
-## Support
-
-For issues with the deployment itself, refer to:
-- [EdgeTelemetry Deployment Repository](https://github.com/NCG-Africa/EdgeTelemetryDeployment)
-- Troubleshooting panels within the guide
-- Make commands: `make help`, `make health`, `make status`, `make deploy-logs`
-
-## License
-
-Internal use only - NCG Africa 
+Internal use only - NCG Africa

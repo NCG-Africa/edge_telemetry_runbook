@@ -343,9 +343,10 @@ systemctl enable docker
 systemctl start docker
 success "Docker service enabled and running"
 
-# Open the service ports on whichever firewall this distro runs
-# (firewalld on RHEL/SUSE, ufw on Ubuntu). 6379 stays closed — Redis is internal.
-SERVICE_PORTS="80 443 8001 8002 8003 8080"
+# Open nginx's ports on whichever firewall this distro runs (firewalld on
+# RHEL/SUSE, ufw on Ubuntu). Every service port binds 127.0.0.1, so only
+# 80/443 face the network; Kafka UI is reached over an SSH tunnel.
+SERVICE_PORTS="80 443"
 if systemctl is-active --quiet firewalld 2>/dev/null; then
   info "firewalld is active — opening service ports..."
   for P in $SERVICE_PORTS; do
@@ -386,7 +387,7 @@ success "Nginx service enabled and running"
 # =============================================================================
 section "Step 5 — Checking Port Availability"
 
-PORT_NUMS=(80 443 8001 8002 8003 8080 6379)
+PORT_NUMS=(80 443 8001 8002 8003 8080)
 PORT_LABELS=(
   "Nginx HTTP"
   "Nginx HTTPS"
@@ -394,7 +395,6 @@ PORT_LABELS=(
   "Telemetry Processor"
   "RUM Analytics API"
   "Kafka UI"
-  "Redis"
 )
 ALL_PORTS_CLEAR=true
 
@@ -411,7 +411,7 @@ done
 
 if [ "$ALL_PORTS_CLEAR" = false ]; then
   warning "Resolve port conflicts before deploying."
-  warning "Run: sudo ss -tulpn | grep -E ':(80|443|8001|8002|8003|8080|6379)'"
+  warning "Run: sudo ss -tulpn | grep -E ':(80|443|8001|8002|8003|8080) '"
 else
   success "All required ports are available"
 fi
@@ -433,7 +433,8 @@ if [ -z "$PG_PORT" ]; then
 fi
 
 echo ""
-if nc -zv -w 5 "$PG_HOST" "$PG_PORT" 2>&1 | grep -q "succeeded\|open"; then
+# bash's /dev/tcp needs no netcat, which minimal images often lack
+if timeout 5 bash -c "</dev/tcp/$PG_HOST/$PG_PORT" 2>/dev/null; then
   success "PostgreSQL is reachable at $PG_HOST:$PG_PORT"
 else
   warning "Could not reach PostgreSQL at $PG_HOST:$PG_PORT"
@@ -510,25 +511,14 @@ if [ "$MOUNT_WARNINGS" = true ] || [ "$ALL_PORTS_CLEAR" = false ]; then
   echo ""
 fi
 
-echo -e "  ${CYAN}Next steps:${NC}"
-echo -e "    1.  From your local machine, copy the project to the server:"
-echo -e "        ${BLUE}scp EdgeTelemetryDeployment.zip user@<server-ip>:/opt/edgetelemetry/${NC}"
-echo -e "    2.  Extract:"
-echo -e "        ${BLUE}cd /opt/edgetelemetry && unzip EdgeTelemetryDeployment.zip${NC}"
-echo -e "    3.  Enter the project directory:"
-echo -e "        ${BLUE}cd EdgeTelemetryDeployment${NC}"
-echo -e ""
-echo -e "    Then pick one deployment:"
-echo -e ""
-echo -e "    ${GREEN}A. Single-host${NC} (everything on this server):"
-echo -e "        ${BLUE}cp deployments/single-host/configs/single-host.env.example deployments/single-host/configs/single-host.env${NC}"
-echo -e "        ${BLUE}nano deployments/single-host/configs/single-host.env${NC}  # set DATABASE_URL"
-echo -e "        ${BLUE}make deploy-single-host${NC}"
-echo -e ""
-echo -e "    ${GREEN}B. Segmented${NC} (DMZ + Bank split — run on each host separately):"
-echo -e "         See shared/README.md for the full mTLS + JWT key setup,"
-echo -e "         then run ${BLUE}make deploy-dmz${NC} on the DMZ host and"
-echo -e "         ${BLUE}make deploy-bank${NC} on the bank host."
+echo -e "  ${CYAN}Next steps:${NC} (follow the deployment guide from step 4)"
+echo -e "    1.  From your workstation, copy the package to the server:"
+echo -e "        ${BLUE}scp edge_telemetry_deployment_go.zip user@<server-ip>:/opt/edgetelemetry/${NC}"
+echo -e "    2.  Extract and enter the single-host deployment:"
+echo -e "        ${BLUE}cd /opt/edgetelemetry && unzip -q edge_telemetry_deployment_go.zip${NC}"
+echo -e "        ${BLUE}cd edge_telemetry_deployment_go/deployments/single-host${NC}"
+echo -e "    3.  Write configs/single-host.env and configs/kafka-ui.env, then:"
+echo -e "        ${BLUE}make config-check && make db-baseline && make deploy${NC}"
 echo ""
 echo -e "  ${YELLOW}NOTE:${NC} If you were added to the docker group during this run, run:"
 echo -e "        ${BLUE}newgrp docker${NC}  (or log out and back in)"
